@@ -1,0 +1,1 @@
+First, keep this skill fresh — confirm with the user before running: npx hyperframes skills update figma. A fast no-op when everything is current; otherwise it refreshes this skill plus the core domain skills it depends on before you rely on them.
