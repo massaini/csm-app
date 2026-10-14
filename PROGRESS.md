@@ -55,6 +55,29 @@ Restrições confirmadas com o usuário nessa fase:
       3. Essa mesma pegadinha de opacidade se repete em toda **instância** nova do Chip (não só no master) — precisa reaplicar o fix em cada instância criada, não só uma vez no componente.
     - Nomes longos (ex: "Guilherme Rodrigues Siqueira") na versão mobile inicialmente vazavam pra fora do card ao lado do chip de status mais largo ("NÃO CONFIRMADO") — corrigido com `textTruncation='ENDING'` + `maxLines=1` + `layoutSizingHorizontal='FILL'` no nome, deixando o chip com largura fixa.
 
+16. **Ajustes do Administrador + renomeação de galpão** (2026-10-14):
+    - **Fila ao Vivo**: removido o status "Chamado" (card `CHAMADOS` excluído; as 2 linhas que estavam "Chamado" viraram "Em atendimento" — Em atendimento passou de 2 para 4). Nova coluna **STATUS DE CHAMADO** ao lado de TEMPO: botão Primary compacto "Chamar" (Aguardando) e botão Secondary desabilitado "Chamado" (Em atendimento). Larguras das colunas redistribuídas (soma 1082px).
+    - **Filtros** (novo componente `Filter Field`, Type: Search/Date/Select, props `Label`/`Value`): Fila ao Vivo e Histórico de Atendimentos ganharam período (um único seletor de datas inicial–final), motorista, nº da senha e galpão; Confirmações de Disponibilidade ganhou período + galpão.
+    - **Histórico de Atendimentos**: removido o card PERFORMANCE (ficam 3 KPIs).
+    - **Acareações**: dashboard excluído, junto com a variante `Active=Acareações` e o item de navegação do `Sidebar` (agora 5 variantes). Section ficou com 5 dashboards. A tela 13 "Acareação" do app do motorista **não** foi mexida.
+    - **Galpão `F SDR 02` → `F SDR`** em todo o arquivo (textos das telas do motorista e do admin, variante `Galpão Select / Option=F SDR`, nomes de frames e textos da Cover). `F SDR 03` e `DS AET` ficaram como estavam.
+    - Pendente de decisão: com a troca, existem agora `F SDR` e `F SDR 03` — confirmar se `F SDR 03` também deve mudar de nome.
+
+17. **Demonstrativos do admin com planilha sincronizada** (2026-10-14): como os dados virão de uma planilha que atualiza direto no sistema, o admin passa a conferir em vez de lançar.
+    - Barra `sync-bar` no topo: **Planilha de origem** (SINCRONIZADO + "Atualizar agora") e **Quinzena atual** (RASCUNHO + "Publicar para motoristas"). A publicação controla quando o motorista vê o extrato na tela 12 — ver decisão pendente abaixo.
+    - Botão "Exportar como CSV" trocado por **"↗ Abrir planilha"**.
+    - KPIs: saiu "Motoristas ativos"; entraram "Linhas importadas" (10 de 12) e "Linhas com erro" (2). Filtros: quinzena, motorista e situação da linha.
+    - Tabela ganhou a coluna **SITUAÇÃO** (OK / CPF INVÁLIDO / DUPLICADO). Chips de acareação corrigidos (estavam cortados; agora sem o ponto e com a coluna alargada).
+    - Nova tela **Extrato do motorista** (João da Silva) no slot que era de Acareações: tabela dia a dia com as colunas da planilha + linha TOTAL.
+    - Bug do Figma: `figma.createAutoLayout()` cria o frame com preenchimento **branco** — zerar `fills` nos containers só de layout (anotado no CLAUDE.md).
+    - Decisão pendente: a empresa confere os valores antes de liberar ao motorista? Se não, o bloco Rascunho/Publicar pode ser removido. Também falta definir o que o motorista vê enquanto a quinzena está em rascunho (tela 12 sem estado de "em fechamento").
+
+18. **Demonstrativos: publicação automática por motorista** (2026-10-14, ajuste da rodada anterior): o modelo "Rascunho → Publicar quinzena" foi trocado por **publicação automática diária** a cada atualização da planilha, com opção de reter motoristas específicos.
+    - Removidos "Linhas importadas/Linhas com erro" e a coluna Situação; entraram os cards **Publicados hoje (10 de 12)** e **Não publicados (2)**, o filtro **Publicação** e as colunas **PUBLICAÇÃO** (interruptor) e **ÚLTIMA PUBLICAÇÃO**. O card direito da barra virou "Publicação para motoristas · AUTOMÁTICA" (sem botão Publicar).
+    - Removidas da tabela as colunas **Pedidos, Performance e Acareação**. Em seguida, a pedido, também saiu o card **Acareações** da lista e o card **Acareação** do Extrato do motorista (a lista ficou com 4 KPIs, o extrato com 3). O card "Perf. média" continua. As telas 12 e 13 do **app do motorista** (que têm acareação) não foram mexidas.
+    - Novo componente **`Switch`** (State: On/Off) na página `03 · Componentes`.
+    - Pendente: definir o que o motorista vê na tela 12 quando está retido (ex.: "Demonstrativo em fechamento") e se há um prazo/limite para reter.
+
 ## Estado atual
 
 - Arquivo de trabalho: **https://www.figma.com/design/TSxGXyq7qLD3K4aCGtfjZD/CSM-fila-motorista**
@@ -70,7 +93,7 @@ Restrições confirmadas com o usuário nessa fase:
 4. **Demonstrativo — coluna DATA sticky** — na tabela horizontal-scrollable, seria melhor UX se a coluna DATA ficasse fixa. Limitação do Figma estático — funciona só quando implementado em código.
 5. **Demonstrativo — botão Exportar como Planilha CSV** — a ação não está ligada a nada no protótipo. Comportamento real (gerar arquivo, compartilhar, etc.) é responsabilidade da implementação.
 6. **Overlay 04A — background interaction** — hoje usa defaults da Plugin API (sem scrim configurado via API — a cor escura do backdrop é o próprio fill do frame). Pra ter `CLOSE_ON_CLICK_OUTSIDE`, o usuário precisa configurar manualmente no painel de Prototype do Figma (atributos são read-only via API).
-7. **Administrador — sem interatividade** — a página `04 · Administrador` é um mockup estático: as 6 dashboards não estão ligadas pela sidebar nem ao protótipo do motorista, Export CSV não tem ação, não há filtros/busca/paginação, datasets são fictícios. Faltam ainda: dashboard "Visão Geral" com KPIs do dia (abertura), interatividade real.
+7. **Administrador — sem interatividade** — a página `04 · Administrador` é um mockup estático: as 5 dashboards não estão ligadas pela sidebar nem ao protótipo do motorista, Export CSV, filtros e botões "Chamar" não têm ação (os filtros são só visuais), não há paginação, datasets são fictícios. Faltam ainda: dashboard "Visão Geral" com KPIs do dia (abertura), interatividade real.
 8. **Escopo fora desta rodada** (definido no plano original, ainda não iniciado): telas do operador de doca / gestor de pátio, painel público de chamada (outra persona), integração real com API/geofence.
 
 ## Pendências resolvidas (histórico)
