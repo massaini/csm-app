@@ -85,6 +85,14 @@ Restrições confirmadas com o usuário nessa fase:
     - **Bônus encontrado na varredura geral**: o `‹` do header da `13 · Acareação` não tinha nenhuma reaction (não voltava pra `12`) — corrigido, reaction adicionada no frame `header` inteiro (mesmo padrão clicável do header de `08`).
     - Varredura confirmou que todo o resto do protótipo (Tab Bar em todas as telas certas, demais reactions tela-a-tela) está consistente com o que o CLAUDE.md documenta — nenhum outro destino errado encontrado.
 
+20. **Removida a tela de bloqueio "Fora do raio" + sinalizador no Gerar senha** (2026-10-16): o usuário já tinha deletado a tela `02 · Fora do raio` direto no Figma (fora de uma sessão com o Claude) e renomeado a tela de Gerar senha de `03` pra `02`, mas isso deixou pontas soltas que esta sessão corrigiu:
+    - **Botão "Entrar" da tela 01 estava sem nenhuma reaction** (a reaction antiga apontava pro node da tela `Fora do raio`, que não existe mais — o Figma limpa a reaction quando o destino é deletado). Reconectado pra ir direto em `02 · Gerar senha`.
+    - **Chip de status na tela 02** (que já existia, mostrando "DENTRO DO PÁTIO — gerar senha liberado" em verde) trocado pra `Tone=Danger` vermelho, texto "FORA DO PÁTIO — gerar senha bloqueado" — esse chip agora é o sinalizador de geofence, substituindo a tela cheia removida. Não bloqueia de fato o botão "Gerar senha" (é mockup estático).
+    - **Encontrado e removido um frame órfão duplicado** (`219:1162`, uma cópia idêntica de "Gerar senha" sem nenhuma reaction apontando pra ele — resíduo de alguma edição manual).
+    - **Renumeradas as 5 telas seguintes** pra fechar o buraco deixado pela tela removida: `04 Aguardando→03`, `05 Chamado→04`, `06 Em atendimento→05`, `07 Concluído→06`, `08 Histórico→07`. Só os nomes dos frames mudaram — os node IDs (e portanto todas as reactions) continuam os mesmos, não precisou religar nada além do botão da tela 01.
+    - **Regrid da linha 1** da Section `Fila — Fluxo Normal` (01/02/03) pra fechar o espaço vazio que a tela removida deixava no canvas.
+    - **Drift de documentação detectado**: ao tirar o screenshot de conferência, apareceram mudanças nas telas `04 Chamado`, `06 Concluído` e `07 Histórico` que não foram feitas em nenhuma sessão com o Claude (ex: `04` virou uma tela cheia amarela "VOCÊ FOI CHAMADO" com botão "Estou a caminho" em vez de avanço automático; `07 Histórico` ganhou cards de estatística no topo). O CLAUDE.md foi marcado com um aviso de "doc drift" nesses pontos — ainda não foi feito um resync completo do conteúdo dessas telas.
+
 ## Estado atual
 
 - Arquivo de trabalho: **https://www.figma.com/design/TSxGXyq7qLD3K4aCGtfjZD/CSM-fila-motorista**
