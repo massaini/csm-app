@@ -78,6 +78,13 @@ Restrições confirmadas com o usuário nessa fase:
     - Novo componente **`Switch`** (State: On/Off) na página `03 · Componentes`.
     - Pendente: definir o que o motorista vê na tela 12 quando está retido (ex.: "Demonstrativo em fechamento") e se há um prazo/limite para reter.
 
+19. **Correções pós-teste em Present no app Figma mobile** (2026-10-16): o usuário testou o protótipo no app Figma pelo celular e reportou 3 bugs + pedido de revisão geral.
+    - **`07 · Concluído` → "Voltar ao início"** apontava pra `03 · Gerar senha` (node `29:95`) em vez de `01 · Identificação` — corrigido o destino da reaction.
+    - **`06 · Em atendimento`** não tinha nenhum jeito de sair da tela manualmente (só o auto-advance de 4s pra `07`). Adicionada seta `←` no header (clonada do ícone já usado em `08 · Histórico`), inserida como primeiro filho do `Header` com `primaryAxisAlignItems='SPACE_BETWEEN'`, navegando de volta pra `04 · Aguardando`.
+    - **Export CSV nos dashboards do admin**: criado overlay `Modal · Exportar CSV` (frame standalone na página `04 · Administrador`, `x=6060,y=100`, clonado do padrão `confirm-card` do `04A`) com título, corpo e botões Primary "Sim, exportar CSV" / Secondary "Cancelar" (ambos `CLOSE`). Ligado às 4 dashboards que realmente têm botão Export CSV — Fila ao Vivo, Histórico de Atendimentos, Histórico de Senhas, Confirmações de Disponibilidade (Demonstrativos e Extrato do motorista não têm esse botão, ver CLAUDE.md).
+    - **Bônus encontrado na varredura geral**: o `‹` do header da `13 · Acareação` não tinha nenhuma reaction (não voltava pra `12`) — corrigido, reaction adicionada no frame `header` inteiro (mesmo padrão clicável do header de `08`).
+    - Varredura confirmou que todo o resto do protótipo (Tab Bar em todas as telas certas, demais reactions tela-a-tela) está consistente com o que o CLAUDE.md documenta — nenhum outro destino errado encontrado.
+
 ## Estado atual
 
 - Arquivo de trabalho: **https://www.figma.com/design/TSxGXyq7qLD3K4aCGtfjZD/CSM-fila-motorista**
@@ -93,7 +100,7 @@ Restrições confirmadas com o usuário nessa fase:
 4. **Demonstrativo — coluna DATA sticky** — na tabela horizontal-scrollable, seria melhor UX se a coluna DATA ficasse fixa. Limitação do Figma estático — funciona só quando implementado em código.
 5. **Demonstrativo — botão Exportar como Planilha CSV** — a ação não está ligada a nada no protótipo. Comportamento real (gerar arquivo, compartilhar, etc.) é responsabilidade da implementação.
 6. **Overlay 04A — background interaction** — hoje usa defaults da Plugin API (sem scrim configurado via API — a cor escura do backdrop é o próprio fill do frame). Pra ter `CLOSE_ON_CLICK_OUTSIDE`, o usuário precisa configurar manualmente no painel de Prototype do Figma (atributos são read-only via API).
-7. **Administrador — sem interatividade** — a página `04 · Administrador` é um mockup estático: as 5 dashboards não estão ligadas pela sidebar nem ao protótipo do motorista, Export CSV, filtros e botões "Chamar" não têm ação (os filtros são só visuais), não há paginação, datasets são fictícios. Faltam ainda: dashboard "Visão Geral" com KPIs do dia (abertura), interatividade real.
+7. **Administrador — sem interatividade** — a página `04 · Administrador` é majoritariamente um mockup estático: as 5 dashboards não estão ligadas pela sidebar nem ao protótipo do motorista, filtros e botões "Chamar" não têm ação (os filtros são só visuais), não há paginação, datasets são fictícios. Export CSV agora abre um modal de confirmação (ver item 19), mas os botões do modal só fecham o overlay — não geram arquivo. Faltam ainda: dashboard "Visão Geral" com KPIs do dia (abertura), interatividade real.
 8. **Escopo fora desta rodada** (definido no plano original, ainda não iniciado): telas do operador de doca / gestor de pátio, painel público de chamada (outra persona), integração real com API/geofence.
 
 ## Pendências resolvidas (histórico)
