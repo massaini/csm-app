@@ -134,3 +134,4 @@ Restrições confirmadas com o usuário nessa fase:
     - **Admin:** Bruno Almeida passou de F SDR para Anjun em Fila ao Vivo, Histórico de Senhas (2 linhas) e Confirmações.
     - **Capa:** itens 8 e 9 listam os 5 galpões.
     - Os PDFs de `materiais/` ainda mostram 4 galpões — regenerar se for compartilhar.
+    - **Correção:** o nome do galpão é a sigla `SP-R-D228` (não "Anjun"). Nos seletores, cards, admin e capa, a sigla substitui o rótulo; o subtítulo do card voltou a mostrar só o endereço. Para caber 5 segmentos, a fonte dos rótulos do `Galpão Select` ficou em 11px e o espaçamento entre segmentos em 2px.
