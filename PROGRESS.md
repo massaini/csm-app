@@ -92,6 +92,24 @@ Restrições confirmadas com o usuário nessa fase:
     - **Renumeradas as 5 telas seguintes** pra fechar o buraco deixado pela tela removida: `04 Aguardando→03`, `05 Chamado→04`, `06 Em atendimento→05`, `07 Concluído→06`, `08 Histórico→07`. Só os nomes dos frames mudaram — os node IDs (e portanto todas as reactions) continuam os mesmos, não precisou religar nada além do botão da tela 01.
     - **Regrid da linha 1** da Section `Fila — Fluxo Normal` (01/02/03) pra fechar o espaço vazio que a tela removida deixava no canvas.
     - **Drift de documentação detectado**: ao tirar o screenshot de conferência, apareceram mudanças nas telas `04 Chamado`, `06 Concluído` e `07 Histórico` que não foram feitas em nenhuma sessão com o Claude (ex: `04` virou uma tela cheia amarela "VOCÊ FOI CHAMADO" com botão "Estou a caminho" em vez de avanço automático; `07 Histórico` ganhou cards de estatística no topo). O CLAUDE.md foi marcado com um aviso de "doc drift" nesses pontos — ainda não foi feito um resync completo do conteúdo dessas telas.
+21. **Nova franquia DS SDE** (2026-10-23): quarto galpão, no mesmo endereço do F SDR 03 (Avenida dos Estados 6761).
+    - **Motorista:** `Galpão Select` ganhou o segmento "DS SDE" nas 3 variantes e uma 4ª variante `Option=DS SDE` (com o endereço); as reações de troca de variante foram religadas. Telas `10` e `10A` atualizam sozinhas. Na tela `03 · Gerar senha` (versões Disponível e Bloqueado) entrou um 4º `Option Card`.
+    - Para o 4º card caber sem cobrir o botão, o `Option Card` passou de 64 para 56px, o espaçamento da tela de 20 para 16 e o do formulário de 10 para 8.
+    - **Admin:** Marcos Oliveira e Diego Santos (antes em F SDR 03) passaram para DS SDE em Fila ao Vivo, Histórico de Senhas e Confirmações, para a nova franquia aparecer nos dados. O filtro de galpão é só visual, então não mudou.
+    - **Capa:** itens 8 e 9 agora listam os 4 galpões.
+    - Armadilha do Figma: `clone()` de uma variante **não** a coloca no `COMPONENT_SET` — é preciso `set.appendChild(clone)` antes de usar `set.children`, e redimensionar o conjunto manualmente (`set.resize`) para a nova variante ficar dentro da moldura. Um erro no meio de um `use_figma` desfaz o script inteiro.
+
+22. **Botão ID na Acareação do motorista** (2026-10-23): a tela `13 · Acareação` ganhou o botão **ID** no cabeçalho, que abre o overlay `13A · IDs descontados`.
+    - Regra de negócio: o motorista pode ter de 0 a N IDs descontados por quinzena, limitados a 20% do que tem a receber. Os IDs **não têm valor individual** — o admin soma tudo e o motorista vê um total só (ex.: "IDs 1, 2, 3, 4 e 5 — R$ 400"). Por isso o overlay mostra **somente a lista de IDs** (formato de 15 dígitos, ex. `999880132456789`) e um botão "Fechar", sem valores, contagem ou textos explicativos.
+    - Primeira versão (descartada): tela cheia com valor por ID, descontado e diferido. Foi removida e substituída pelo overlay pequeno (clonado da `04A`), com lista rolável (`overflowDirection='VERTICAL'`) para muitos IDs.
+    - A Section `Demonstrativo — Fluxo de Exceção` foi alargada (940px). Ponto de partida do protótipo continua só na tela 01.
+    - Atenção: `overflowDirection` aceita `NONE | HORIZONTAL | VERTICAL | BOTH` (não `VERTICAL_SCROLLING`).
+
+23. **Login por CPF + senha, preço por ID e botão "Exportar"** (2026-10-29):
+    - Tela `01 · Identificação`: os campos agora são **CPF** e **SENHA** (antes: nome completo + CPF); o texto de apoio foi ajustado.
+    - Overlay `13A · IDs descontados`: cada ID agora mostra o **preço** (cada ID é um produto). Valores de demonstração: R$ 1,00 / 0,50 / 1,00 / 0,50 / 1,00 / 1,00 = R$ 5,00, igual à linha PNR / Extravio da tela 13. Isso substitui a regra anterior ("IDs sem valor individual").
+    - "Exportar como CSV" virou só **"Exportar"** em todo o arquivo: 4 dashboards do admin, tela `07 · Histórico` (`↓ Exportar`), barra da tela `12` e o modal de exportação do admin (título "Exportar?", botão "Sim, exportar"). O modal `Modal · Exportar CSV` e a ligação dos botões a ele foram feitos pelo seu amigo direto no Figma.
+    - **Materiais explicativos** (pasta `materiais/`, PDFs gerados a partir das telas do Figma, com setas vermelhas numeradas sobre cada função e explicação ao lado): `Guia-App-Motorista-CSM-Fila-Digital.pdf` (22 páginas, 18 telas) e `Guia-Painel-Administrador-CSM-Fila-Digital.pdf` (11 páginas, 6 telas + janela de exportação). Se as telas mudarem, os PDFs precisam ser gerados de novo.
 
 ## Estado atual
 
@@ -123,3 +141,11 @@ Restrições confirmadas com o usuário nessa fase:
 2. **MCP do Figma autenticado nessa mesma conta de estudante** (não a conta Starter antiga) — verificar com `whoami`; o `tier` deve aparecer como `student`, não `starter`.
 3. Ler `CLAUDE.md` (estrutura do repo/arquivo) e este `PROGRESS.md` (histórico e pendências) antes de mexer em qualquer coisa.
 4. Se for continuar as melhorias de UX, resolver os pontos em aberto acima com o usuário antes de assumir respostas.
+
+24. **Nova franquia Anjun** (2026-11-05): quinto galpão, sigla `SP-R-D228`, mesmo endereço do F SDR (Avenida André Ramalho 89).
+    - **Motorista:** `Galpão Select` ganhou o segmento "Anjun" nas 4 variantes e uma 5ª variante `Option=Anjun` (endereço + sigla), com as reações religadas; fonte dos segmentos 15→13 e espaçamento 8→4 para caberem 5. Na tela `03 · Gerar senha` (Disponível e Bloqueado) entrou um 5º `Option Card` ("Anjun", subtítulo com endereço · sigla).
+    - Para caber sem cobrir o botão: `Option Card` 56→52px (padding 4), padding superior da tela 40→24, espaçamento da tela 16→12 e do formulário 8→6. Os `Option Card` de instância precisaram de `resize` manual (a altura da instância não segue o componente).
+    - **Admin:** Bruno Almeida passou de F SDR para Anjun em Fila ao Vivo, Histórico de Senhas (2 linhas) e Confirmações.
+    - **Capa:** itens 8 e 9 listam os 5 galpões.
+    - Os PDFs de `materiais/` ainda mostram 4 galpões — regenerar se for compartilhar.
+    - **Correção:** o nome do galpão é a sigla `SP-R-D228` (não "Anjun"). Nos seletores, cards, admin e capa, a sigla substitui o rótulo; o subtítulo do card voltou a mostrar só o endereço. Para caber 5 segmentos, a fonte dos rótulos do `Galpão Select` ficou em 11px e o espaçamento entre segmentos em 2px.
