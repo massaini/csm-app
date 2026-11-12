@@ -1,0 +1,319 @@
+// Modelo de domínio do MVP da Fila — PRD §6.0.
+// Índices parciais (uma senha ativa por motorista, uma senha por bancada ocupada,
+// um único SUPER_ADMIN) não são expressáveis aqui: estão em
+// prisma/migrations/*_indices_parciais/migration.sql.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum StatusSenha {
+  AGUARDANDO
+  CHAMADA
+  EM_ATENDIMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum MotivoCancelamento {
+  MOTORISTA
+  EXPIRADA
+  FIM_DO_DIA
+  MOTORISTA_DESATIVADO
+}
+
+enum ConcluidaPor {
+  MOTORISTA
+  ADMIN
+  SISTEMA
+}
+
+enum ChegadaPor {
+  MOTORISTA
+  ADMIN
+}
+
+enum PapelAdmin {
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum TipoUsuario {
+  MOTORISTA
+  ADMIN
+}
+
+model Local {
+  id         Int      @id @default(autoincrement())
+  nome       String
+  endereco   String
+  latitude   Float
+  longitude  Float
+  raioMetros Int      @default(150)
+  galpoes    Galpao[]
+}
+
+model Galpao {
+  id               Int             @id @default(autoincrement())
+  nome             String          @unique
+  endereco         String
+  prefixoSenha     String          @unique @db.Char(1)
+  ativo            Boolean         @default(true)
+  localId          Int
+  local            Local           @relation(fields: [localId], references: [id])
+  bancadas         Bancada[]
+  mapeamentos      RegiaoBancada[]
+  senhas           Senha[]
+  contadores       ContadorSenha[]
+  motoristasUltimo Motorista[]
+}
+
+model Bancada {
+  id            Int             @id @default(autoincrement())
+  galpaoId      Int
+  galpao        Galpao          @relation(fields: [galpaoId], references: [id])
+  identificacao String
+  ativa         Boolean         @default(true)
+  mapeamentos   RegiaoBancada[]
+  senhas        Senha[]
+
+  @@unique([galpaoId, identificacao])
+}
+
+model Regiao {
+  id          Int             @id @default(autoincrement())
+  codigo      String          @unique
+  nome        String
+  ativa       Boolean         @default(true)
+  mapeamentos RegiaoBancada[]
+  motoristas  Motorista[]
+}
+
+model RegiaoBancada {
+  galpaoId  Int
+  regiaoId  Int
+  bancadaId Int
+  galpao    Galpao  @relation(fields: [galpaoId], references: [id])
+  regiao    Regiao  @relation(fields: [regiaoId], references: [id])
+  bancada   Bancada @relation(fields: [bancadaId], references: [id])
+
+  @@id([galpaoId, regiaoId])
+}
+
+model Motorista {
+  id                      Int       @id @default(autoincrement())
+  nome                    String
+  /**
+   * só dígitos
+   */
+  cpf                     String    @unique @db.VarChar(11)
+  telefone                String?
+  senhaHash               String
+  senhaTemporariaExpiraEm DateTime? @db.Timestamptz(3)
+  deveTrocarSenha         Boolean   @default(true)
+  ativo                   Boolean   @default(true)
+  regiaoId                Int
+  regiao                  Regiao    @relation(fields: [regiaoId], references: [id])
+  ultimaPlaca             String?
+  ultimoGalpaoId          Int?
+  ultimoGalpao            Galpao?   @relation(fields: [ultimoGalpaoId], references: [id])
+  criadoEm                DateTime  @default(now()) @db.Timestamptz(3)
+
+  senhas     Senha[]
+  liberacoes LiberacaoGeofence[]
+  inscricoes PushSubscription[]
+  sessoes    Sessao[]
+}
+
+model Admin {
+  id                      Int        @id @default(autoincrement())
+  nome                    String
+  cpf                     String     @unique @db.VarChar(11)
+  senhaHash               String
+  senhaTemporariaExpiraEm DateTime?  @db.Timestamptz(3)
+  papel                   PapelAdmin @default(ADMIN)
+  deveTrocarSenha         Boolean    @default(true)
+  ativo                   Boolean    @default(true)
+  criadoEm                DateTime   @default(now()) @db.Timestamptz(3)
+
+  chamadas   Senha[]             @relation("ChamadaPorAdmin")
+  chegadas   Senha[]             @relation("ChegadaPorAdmin")
+  conclusoes Senha[]             @relation("ConclusaoPorAdmin")
+  liberacoes LiberacaoGeofence[]
+  sessoes    Sessao[]
+}
+
+model Senha {
+  id     Int    @id @default(autoincrement())
+  codigo String
+  /**
+   * dia operacional da geração, "AAAA-MM-DD"
+   */
+  dia    String @db.VarChar(10)
+
+  motoristaId Int
+  motorista   Motorista @relation(fields: [motoristaId], references: [id])
+  galpaoId    Int
+  galpao      Galpao    @relation(fields: [galpaoId], references: [id])
+  bancadaId   Int
+  bancada     Bancada   @relation(fields: [bancadaId], references: [id])
+  /**
+   * maiúsculas, sem hífen
+   */
+  placa       String
+
+  // snapshot gravado na geração: editar cadastros não altera o histórico
+  motoristaNome        String
+  galpaoNome           String
+  galpaoEndereco       String
+  bancadaIdentificacao String
+  regiaoCodigo         String
+  regiaoNome           String
+
+  status StatusSenha @default(AGUARDANDO)
+
+  geradaEm DateTime @default(now()) @db.Timestamptz(3)
+
+  chamadaEm              DateTime? @db.Timestamptz(3)
+  chamadaPorAdminId      Int?
+  chamadaPorAdmin        Admin?    @relation("ChamadaPorAdmin", fields: [chamadaPorAdminId], references: [id])
+  /**
+   * chamadaEm + toleranciaMin vigente na hora da chamada
+   */
+  prazoEm                DateTime? @db.Timestamptz(3)
+  toleranciaMinNaChamada Int?
+  foraDeOrdem            Boolean   @default(false)
+
+  aCaminhoEm      DateTime?   @db.Timestamptz(3)
+  aCaminhoPor     ChegadaPor?
+  aCaminhoAdminId Int?
+  aCaminhoAdmin   Admin?      @relation("ChegadaPorAdmin", fields: [aCaminhoAdminId], references: [id])
+
+  concluidaEm      DateTime?     @db.Timestamptz(3)
+  concluidaPor     ConcluidaPor?
+  concluidaAdminId Int?
+  concluidaAdmin   Admin?        @relation("ConclusaoPorAdmin", fields: [concluidaAdminId], references: [id])
+
+  canceladaEm        DateTime?           @db.Timestamptz(3)
+  motivoCancelamento MotivoCancelamento?
+
+  resultadoVistoEm DateTime? @db.Timestamptz(3)
+
+  // geolocalização na geração (nulos quando liberada sem leitura de GPS)
+  lat         Float?
+  lng         Float?
+  precisaoM   Float?
+  distanciaM  Float?
+  liberacaoId Int?
+  liberacao   LiberacaoGeofence? @relation(fields: [liberacaoId], references: [id])
+
+  envios EnvioPush[]
+
+  @@unique([galpaoId, dia, codigo])
+  @@index([bancadaId, status])
+  @@index([motoristaId, geradaEm])
+  @@index([dia, galpaoId])
+  @@index([status, prazoEm])
+}
+
+model ContadorSenha {
+  galpaoId Int
+  dia      String @db.VarChar(10)
+  ultimo   Int    @default(0)
+  galpao   Galpao @relation(fields: [galpaoId], references: [id])
+
+  @@id([galpaoId, dia])
+}
+
+model LiberacaoGeofence {
+  id          Int       @id @default(autoincrement())
+  motoristaId Int
+  motorista   Motorista @relation(fields: [motoristaId], references: [id])
+  adminId     Int
+  admin       Admin     @relation(fields: [adminId], references: [id])
+  criadaEm    DateTime  @default(now()) @db.Timestamptz(3)
+  /**
+   * fim do dia operacional
+   */
+  expiraEm    DateTime  @db.Timestamptz(3)
+  usadaEm     DateTime? @db.Timestamptz(3)
+  senhas      Senha[]
+
+  @@index([motoristaId, expiraEm])
+}
+
+/**
+ * Linha única (id = 1).
+ */
+model Configuracao {
+  id             Int @id @default(1)
+  toleranciaMin  Int @default(5)
+  carenciaSeg    Int @default(30)
+  tempoPadraoMin Int @default(15)
+  ocupacaoMaxMin Int @default(120)
+}
+
+model PushSubscription {
+  id           Int         @id @default(autoincrement())
+  endpoint     String      @unique
+  p256dh       String
+  auth         String
+  motoristaId  Int
+  motorista    Motorista   @relation(fields: [motoristaId], references: [id], onDelete: Cascade)
+  atualizadaEm DateTime    @default(now()) @db.Timestamptz(3)
+  envios       EnvioPush[]
+}
+
+model EnvioPush {
+  id             Int               @id @default(autoincrement())
+  senhaId        Int
+  senha          Senha             @relation(fields: [senhaId], references: [id])
+  subscriptionId Int?
+  subscription   PushSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  enviadoEm      DateTime          @default(now()) @db.Timestamptz(3)
+  statusHttp     Int?
+}
+
+model Sessao {
+  id          Int         @id @default(autoincrement())
+  tipo        TipoUsuario
+  motoristaId Int?
+  motorista   Motorista?  @relation(fields: [motoristaId], references: [id], onDelete: Cascade)
+  adminId     Int?
+  admin       Admin?      @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  /**
+   * SHA-256 do token do cookie
+   */
+  tokenHash   String      @unique
+  criadaEm    DateTime    @default(now()) @db.Timestamptz(3)
+  expiraEm    DateTime    @db.Timestamptz(3)
+}
+
+model TentativaLogin {
+  id       Int      @id @default(autoincrement())
+  cpf      String   @db.VarChar(11)
+  ip       String
+  instante DateTime @default(now()) @db.Timestamptz(3)
+  sucesso  Boolean
+
+  @@index([cpf, instante])
+  @@index([ip, instante])
+}
+
+model Auditoria {
+  id       Int          @id @default(autoincrement())
+  atorTipo TipoUsuario?
+  atorId   Int?
+  acao     String
+  alvoTipo String?
+  alvoId   String?
+  dados    Json?
+  instante DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([acao, instante])
+}
