@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EstadoMotorista } from '@/server/fila-motorista';
 import type { RespostaDaAcao } from './actions';
@@ -18,7 +19,11 @@ export function useEstadoFila(inicial: EstadoMotorista) {
   const [estado, setEstado] = useState(inicial);
   const [semConexao, setSemConexao] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const desvioRef = useRef(Date.parse(inicial.agora) - Date.now());
+  const router = useRouter();
+  const desvioRef = useRef(0);
+  useEffect(() => {
+    desvioRef.current = Date.parse(inicial.agora) - Date.now();
+  }, [inicial.agora]);
 
   const aplicar = useCallback((novo: EstadoMotorista) => {
     desvioRef.current = Date.parse(novo.agora) - Date.now();
@@ -29,7 +34,7 @@ export function useEstadoFila(inicial: EstadoMotorista) {
     try {
       const r = await fetch('/api/fila/estado', { cache: 'no-store' });
       if (r.status === 401) {
-        window.location.href = '/login';
+        router.replace('/login');
         return;
       }
       if (r.ok) {
@@ -39,7 +44,7 @@ export function useEstadoFila(inicial: EstadoMotorista) {
     } catch {
       setSemConexao(true);
     }
-  }, [aplicar]);
+  }, [aplicar, router]);
 
   useEffect(() => {
     const id = setInterval(recarregar, POLLING_MS);

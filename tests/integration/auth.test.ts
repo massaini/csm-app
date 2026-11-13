@@ -25,7 +25,6 @@ const SENHA = 'senha-boa-123';
 
 let clock: ReturnType<typeof novoRelogio>;
 let c: Awaited<ReturnType<typeof cenario>>;
-let motoristaId: number;
 const deps = () => ({ db, clock });
 
 async function criarMotorista(
@@ -43,7 +42,6 @@ async function criarMotorista(
       ...extra,
     },
   });
-  motoristaId = m.id;
   return m;
 }
 

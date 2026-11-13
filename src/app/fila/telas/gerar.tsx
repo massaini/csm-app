@@ -51,8 +51,14 @@ export function TelaGerar({ estado, fila }: { estado: EstadoDa<'GERAR'>; fila: F
   }, []);
 
   useEffect(() => {
-    void ler();
-  }, [ler]);
+    let ativo = true;
+    void lerLocalizacao().then((l) => {
+      if (ativo) setLeitura(l);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const galpao = estado.galpoes.find((g) => g.id === galpaoId) ?? null;
   // RF09-CA6: trocar de galpão recalcula com a última leitura, sem novo GPS
