@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { StatCard } from '@/components/ui/basicos';
 import { TabBar } from '@/components/ui/tab-bar';
-import { sairMotorista } from '@/app/acesso-actions';
+import { SairMotorista } from './sair';
 import { relogioSistema } from '@/domain/clock';
 import { db } from '@/server/db';
 import { historicoDoMotorista } from '@/server/fila-motorista';
@@ -86,11 +86,9 @@ export default async function PaginaHistorico() {
           </ul>
         )}
 
-        <form action={sairMotorista} className="mt-auto pt-xl text-center">
-          <button type="submit" className="t-body-m text-text-secondary underline">
-            Sair
-          </button>
-        </form>
+        <div className="mt-auto pt-xl text-center">
+          <SairMotorista />
+        </div>
       </main>
       <TabBar ativa="fila" />
     </div>

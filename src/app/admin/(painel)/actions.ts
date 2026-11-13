@@ -3,6 +3,7 @@
 import { relogioSistema } from '@/domain/clock';
 import { db } from '@/server/db';
 import { exigirAdmin } from '@/server/http-sessao';
+import { enviarChamada } from '@/server/push';
 import {
   chamarSenha,
   concluirSenha,
@@ -33,6 +34,16 @@ const resposta = (codigo: CodigoResultado): RespostaAdmin => ({
 export async function acaoChamar(senhaId: number): Promise<RespostaAdmin> {
   const admin = await exigirAdmin();
   const r = await chamarSenha(deps(), { senhaId, adminId: admin.id });
+  if (r.ok) {
+    // RF18-CA5: falha no push nunca desfaz a chamada; o app também troca de tela pelo SSE
+    try {
+      await enviarChamada(deps(), senhaId);
+    } catch (e) {
+      console.error(
+        JSON.stringify({ nivel: 'erro', evento: 'push.chamada', senhaId, erro: String(e) }),
+      );
+    }
+  }
   return resposta(r.codigo);
 }
 

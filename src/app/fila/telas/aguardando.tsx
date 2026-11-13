@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { AlertBanner, Card, Chip, InfoRow } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
@@ -8,12 +8,18 @@ import { Logo } from '@/components/ui/logo';
 import { acaoCancelar } from '../actions';
 import type { EstadoDa, Fila } from '../tela-fila';
 
+const nunca = () => () => {};
+
 /** Tela `13:2` — Aguardando, com o overlay `144:447` de cancelamento. RF11 e RF12. */
 export function TelaAguardando({ estado, fila }: { estado: EstadoDa<'AGUARDANDO'>; fila: Fila }) {
   const [confirmando, setConfirmando] = useState(false);
   const { senha } = estado;
-  const notificacoesNegadas =
-    typeof Notification !== 'undefined' && Notification.permission === 'denied';
+  // lido só no navegador, para não divergir do HTML do servidor na hidratação (RF05-CA3)
+  const notificacoesNegadas = useSyncExternalStore(
+    nunca,
+    () => typeof Notification === 'undefined' || Notification.permission === 'denied',
+    () => false,
+  );
 
   return (
     <main className="flex flex-1 flex-col gap-base px-xl pb-xl pt-xl">

@@ -18,7 +18,7 @@ export interface EstadoDoFormulario {
 }
 
 const ROTAS: Record<TipoUsuario, { inicio: string; troca: string; login: string }> = {
-  MOTORISTA: { inicio: '/fila', troca: '/trocar-senha', login: '/login' },
+  MOTORISTA: { inicio: '/fila?entrou=1', troca: '/trocar-senha', login: '/login' },
   ADMIN: { inicio: '/admin', troca: '/admin/trocar-senha', login: '/admin/login' },
 };
 
