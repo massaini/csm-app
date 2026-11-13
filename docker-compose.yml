@@ -1,0 +1,26 @@
+# Postgres local para desenvolvimento (5432) e testes (5433). Mesma major do Railway (16).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: csm_fila
+    ports: ['5432:5432']
+    volumes: ['csm_db:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      retries: 30
+  db_test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: csm_fila_test
+    ports: ['5433:5432']
+    tmpfs: ['/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      retries: 30
+volumes:
+  csm_db:

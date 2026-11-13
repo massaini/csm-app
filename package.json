@@ -15,7 +15,9 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:ca-coverage": "tsx scripts/ca-coverage.ts",
+    "db:up": "docker compose up -d --wait"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",
