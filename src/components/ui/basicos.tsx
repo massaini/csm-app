@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-type Tom = 'success' | 'warning' | 'primary' | 'neutral' | 'danger';
+type Tom = 'success' | 'warning' | 'primary' | 'neutral' | 'danger' | 'solido';
 
 const TOM: Record<Tom, string> = {
   success: 'text-success border-success/60 bg-success/15',
@@ -8,6 +8,8 @@ const TOM: Record<Tom, string> = {
   primary: 'text-primary border-primary/60 bg-primary/15',
   neutral: 'text-text-secondary border-border-strong bg-text-muted/15',
   danger: 'text-danger border-danger/60 bg-danger/15',
+  /** chamada em andamento: amarelo cheio, para não se confundir com Aguardando */
+  solido: 'text-on-primary border-primary bg-primary',
 };
 
 /** `Chip` do Figma: pílula com ponto, texto Overline e fundo do tom a 15%. */

@@ -228,29 +228,31 @@ export async function historicoAtendimentos(deps: Deps, f: FiltrosPeriodo) {
   const { dia } = limitesDoDia(clock.agora(), hora(deps));
   const where = wherePeriodo(f, FINALIZADAS);
   const pagina = Math.max(1, f.pagina ?? 1);
-  const [total, senhas, concluidas, cancelados, concluidosHoje] = await Promise.all([
-    db.senha.count({ where }),
-    db.senha.findMany({
-      where,
-      orderBy: [{ geradaEm: 'desc' }, { id: 'desc' }],
-      skip: (pagina - 1) * POR_PAGINA,
-      take: POR_PAGINA,
-    }),
-    db.senha.findMany({
-      where: {
-        status: 'CONCLUIDA',
-        dia: { gte: f.diaInicio, lte: f.diaFim },
-        ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}),
-        concluidaPor: { not: 'SISTEMA' },
-      },
-    }),
-    db.senha.count({
-      where: { status: 'CANCELADA', dia, ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}) },
-    }),
-    db.senha.count({
-      where: { status: 'CONCLUIDA', dia, ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}) },
-    }),
-  ]);
+  const [total, totalConcluidos, senhas, concluidas, cancelados, concluidosHoje] =
+    await Promise.all([
+      db.senha.count({ where }),
+      db.senha.count({ where: { ...where, status: 'CONCLUIDA' } }),
+      db.senha.findMany({
+        where,
+        orderBy: [{ geradaEm: 'desc' }, { id: 'desc' }],
+        skip: (pagina - 1) * POR_PAGINA,
+        take: POR_PAGINA,
+      }),
+      db.senha.findMany({
+        where: {
+          status: 'CONCLUIDA',
+          dia: { gte: f.diaInicio, lte: f.diaFim },
+          ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}),
+          concluidaPor: { not: 'SISTEMA' },
+        },
+      }),
+      db.senha.count({
+        where: { status: 'CANCELADA', dia, ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}) },
+      }),
+      db.senha.count({
+        where: { status: 'CONCLUIDA', dia, ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}) },
+      }),
+    ]);
   // "Tempo médio": mesmas exclusões da média do dia (SISTEMA e carregamento acima do máximo)
   const totais = concluidas
     .filter((s) => s.chamadaEm && s.concluidaEm)
@@ -267,6 +269,9 @@ export async function historicoAtendimentos(deps: Deps, f: FiltrosPeriodo) {
       tempoMedioMin: tempoMedio === null ? null : minutos(tempoMedio),
     },
     total,
+    /** RF20-CA6: contagens do filtro inteiro, para o subtítulo */
+    totalConcluidos,
+    totalCancelados: total - totalConcluidos,
     pagina,
     paginas: Math.max(1, Math.ceil(total / POR_PAGINA)),
     linhas: senhas.map((s): LinhaAtendimento => ({

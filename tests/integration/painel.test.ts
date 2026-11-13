@@ -152,7 +152,7 @@ describe('Fila ao Vivo', () => {
 });
 
 describe('Histórico de Atendimentos', () => {
-  it('RF20-CA1: lista concluídas e canceladas com tempo total ("—" nas canceladas)', async () => {
+  it('RF20-CA1 / RF20-CA6: lista concluídas e canceladas com tempo total ("—" nas canceladas)', async () => {
     const { m, senha } = await atender('Concluiu');
     clock.avancar(20 * MIN);
     await concluirSenha(deps(), { senhaId: senha.id, por: motorista(m.id) });
@@ -160,6 +160,7 @@ describe('Histórico de Atendimentos', () => {
     await cancelarPeloMotorista(deps(), { senhaId: canc.senha.id, motoristaId: canc.m.id });
     await gerar('Aguardando'); // ativa: não entra
     const h = await historicoAtendimentos(deps(), { diaInicio: HOJE, diaFim: HOJE });
+    expect([h.totalConcluidos, h.totalCancelados]).toEqual([1, 1]); // RF20-CA6
     expect(h.linhas.map((l) => [l.motorista.split(' ')[0], l.status, l.totalMin])).toEqual([
       ['Cancelou', 'CANCELADA', null],
       ['Concluiu', 'CONCLUIDA', 21],
