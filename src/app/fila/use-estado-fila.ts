@@ -1,0 +1,95 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { EstadoMotorista } from '@/server/fila-motorista';
+import type { RespostaDaAcao } from './actions';
+
+const POLLING_MS = 4_000; // RNF01-CA1: fallback sem SSE
+const ESPERAS_REPETICAO_MS = [1_000, 2_000, 4_000]; // RF30-CA1: 1 envio + 3 repetições
+
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Estado de /fila no cliente: começa com o renderizado no servidor, refaz o fetch a cada 4 s
+ * e ao voltar para o primeiro plano (RF11-CA4), e mede o desvio entre o relógio do aparelho e
+ * o do servidor para as contagens (RF13-CA1).
+ */
+export function useEstadoFila(inicial: EstadoMotorista) {
+  const [estado, setEstado] = useState(inicial);
+  const [semConexao, setSemConexao] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const desvioRef = useRef(Date.parse(inicial.agora) - Date.now());
+
+  const aplicar = useCallback((novo: EstadoMotorista) => {
+    desvioRef.current = Date.parse(novo.agora) - Date.now();
+    setEstado(novo);
+  }, []);
+
+  const recarregar = useCallback(async () => {
+    try {
+      const r = await fetch('/api/fila/estado', { cache: 'no-store' });
+      if (r.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
+      if (r.ok) {
+        aplicar(await r.json());
+        setSemConexao(false);
+      }
+    } catch {
+      setSemConexao(true);
+    }
+  }, [aplicar]);
+
+  useEffect(() => {
+    const id = setInterval(recarregar, POLLING_MS);
+    const aoVoltar = () => {
+      if (document.visibilityState === 'visible') void recarregar();
+    };
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
+  }, [recarregar]);
+
+  /** Executa uma ação com repetição automática em falha de rede (RF30). */
+  const executar = useCallback(
+    async (acao: () => Promise<RespostaDaAcao>): Promise<RespostaDaAcao | null> => {
+      setEnviando(true);
+      try {
+        for (let tentativa = 0; ; tentativa++) {
+          try {
+            const r = await acao();
+            aplicar(r.estado);
+            setSemConexao(false);
+            return r;
+          } catch {
+            if (tentativa >= ESPERAS_REPETICAO_MS.length) {
+              setSemConexao(true);
+              return null;
+            }
+            await espera(ESPERAS_REPETICAO_MS[tentativa]);
+          }
+        }
+      } finally {
+        setEnviando(false);
+      }
+    },
+    [aplicar],
+  );
+
+  /** "Agora" no relógio do servidor. */
+  const agoraServidor = useCallback(() => Date.now() + desvioRef.current, []);
+
+  return { estado, semConexao, enviando, recarregar, executar, agoraServidor };
+}
+
+/** Re-renderiza a cada `ms` (contagens e cronômetros). */
+export function useTique(ms = 1_000) {
+  const [, setT] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setT((t) => t + 1), ms);
+    return () => clearInterval(id);
+  }, [ms]);
+}
