@@ -1,12 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import * as cad from '@/server/cadastros';
 import { exigirAdmin } from '@/server/http-sessao';
 
-const deps = () => ({ db, clock: relogioSistema });
+const deps = () => ({ db, clock: relogioApp });
 
 /* Motoristas — busca por POST para o CPF nunca ir na URL (RF24-CA7) */
 

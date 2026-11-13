@@ -31,7 +31,10 @@ export default function PaginaInstalar() {
         </ol>
       </section>
 
-      <Link href="/login" className="t-body-m mt-auto text-primary underline">
+      <Link
+        href="/login"
+        className="t-body-m mt-auto inline-flex min-h-[44px] items-center self-start text-primary underline"
+      >
         Ir para o login
       </Link>
     </main>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { esquemaConsulta } from '@/server/filtros-admin';
 import { usuarioAtual } from '@/server/http-sessao';
@@ -16,11 +16,7 @@ export async function POST(req: Request) {
   const consulta = esquemaConsulta.safeParse(await req.json().catch(() => null));
   if (!consulta.success) return NextResponse.json({ erro: 'filtros_invalidos' }, { status: 400 });
 
-  const r = await exportarCsv(
-    { db, clock: relogioSistema },
-    consulta.data.tela,
-    consulta.data.filtros,
-  );
+  const r = await exportarCsv({ db, clock: relogioApp }, consulta.data.tela, consulta.data.filtros);
   if (!r.ok) {
     return NextResponse.json(
       { erro: 'muitas_linhas', mensagem: 'Refine o período para exportar' },

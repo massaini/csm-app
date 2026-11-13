@@ -1,4 +1,4 @@
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { limitesDoDia, ultimosDias } from '@/domain/dia';
 import { db } from '@/server/db';
 import { HistoricoAtendimentos } from '../historicos';
@@ -6,7 +6,7 @@ import { HistoricoAtendimentos } from '../historicos';
 export const metadata = { title: 'Histórico de Atendimentos · Painel CSM' };
 
 export default async function PaginaAtendimentos() {
-  const { dia } = limitesDoDia(relogioSistema.agora(), process.env.HORA_VIRADA ?? '00:00');
+  const { dia } = limitesDoDia(relogioApp.agora(), process.env.HORA_VIRADA ?? '00:00');
   const galpoes = await db.galpao.findMany({
     where: { ativo: true },
     orderBy: { prefixoSenha: 'asc' },

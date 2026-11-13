@@ -1,4 +1,4 @@
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { listarAdmins } from '@/server/cadastros';
 import { exigirAdmin } from '@/server/http-sessao';
@@ -9,6 +9,6 @@ export const metadata = { title: 'Administradores · Painel CSM' };
 /** RF27 — só o super-admin; um ADMIN é levado de volta à Fila ao Vivo (RF27-CA2). */
 export default async function PaginaAdministradores() {
   const eu = await exigirAdmin({ apenasSuper: true });
-  const admins = await listarAdmins({ db, clock: relogioSistema });
+  const admins = await listarAdmins({ db, clock: relogioApp });
   return <Administradores admins={admins} meuId={eu.id} />;
 }

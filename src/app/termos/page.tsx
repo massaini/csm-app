@@ -10,7 +10,10 @@ export default function PaginaTermos() {
       <p className="t-body-m text-text-secondary">
         O texto dos termos de uso da CSM será publicado aqui antes do lançamento.
       </p>
-      <Link href="/login" className="t-body-m mt-auto text-primary underline">
+      <Link
+        href="/login"
+        className="t-body-m mt-auto inline-flex min-h-[44px] items-center self-start text-primary underline"
+      >
         Voltar
       </Link>
     </main>

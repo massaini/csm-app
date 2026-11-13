@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { esquemaConsulta } from '@/server/filtros-admin';
 import { usuarioAtual } from '@/server/http-sessao';
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const consulta = esquemaConsulta.safeParse(await req.json().catch(() => null));
   if (!consulta.success) return NextResponse.json({ erro: 'filtros_invalidos' }, { status: 400 });
 
-  const deps = { db, clock: relogioSistema };
+  const deps = { db, clock: relogioApp };
   const { tela, filtros } = consulta.data;
   const dados =
     tela === 'fila-ao-vivo'

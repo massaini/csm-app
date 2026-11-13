@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { StatCard } from '@/components/ui/basicos';
 import { TabBar } from '@/components/ui/tab-bar';
 import { SairMotorista } from './sair';
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { historicoDoMotorista } from '@/server/fila-motorista';
 import { exigirMotorista } from '@/server/http-sessao';
@@ -23,13 +23,17 @@ const dataHora = (iso: string) => {
 /** Tela `19:64` — Histórico (RF15), sem o "Exportar" (P16) e com "Sair" no rodapé (RF04-CA3). */
 export default async function PaginaHistorico() {
   const motorista = await exigirMotorista();
-  const h = await historicoDoMotorista({ db, clock: relogioSistema }, motorista.id);
+  const h = await historicoDoMotorista({ db, clock: relogioApp }, motorista.id);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col">
       <main className="flex flex-1 flex-col gap-base px-xl pb-xl pt-xl">
         <header className="flex items-center gap-md">
-          <Link href="/fila" aria-label="Voltar para a fila" className="text-text-primary">
+          <Link
+            href="/fila"
+            aria-label="Voltar para a fila"
+            className="-ml-md flex h-[44px] w-[44px] items-center justify-center text-text-primary"
+          >
             <svg
               width="24"
               height="24"

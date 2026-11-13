@@ -82,7 +82,7 @@ export function AtivarNotificacoes({ chavePublica }: { chavePublica: string }) {
             configurações do navegador.
           </p>
         ) : null}
-        <button className="t-body-m py-sm text-text-secondary underline" onClick={agoraNao}>
+        <button className="t-body-m min-h-[44px] text-text-secondary underline" onClick={agoraNao}>
           Agora não
         </button>
       </div>

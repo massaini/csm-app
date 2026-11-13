@@ -1,4 +1,4 @@
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { estadoDoMotorista } from '@/server/fila-motorista';
 import { exigirMotorista } from '@/server/http-sessao';
@@ -9,7 +9,7 @@ export const metadata = { title: 'Fila · CSM Fila Digital' };
 /** RF07 — uma rota, várias telas: o estado da senha decide qual mostrar. */
 export default async function PaginaFila({ searchParams }: PageProps<'/fila'>) {
   const motorista = await exigirMotorista();
-  const estado = await estadoDoMotorista({ db, clock: relogioSistema }, motorista.id);
+  const estado = await estadoDoMotorista({ db, clock: relogioApp }, motorista.id);
   const { entrou } = await searchParams;
   return (
     <TelaFila

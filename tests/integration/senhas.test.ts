@@ -327,7 +327,7 @@ describe('estou a caminho / confirmar chegada / concluir', () => {
     expect(r2.senha).toMatchObject({ status: 'CONCLUIDA', concluidaPor: 'MOTORISTA' });
   });
 
-  it('RF19-CA3: repetir a ação sobre estado que já mudou devolve CONFLITO e não audita de novo', async () => {
+  it('RF19-CA3 / RF30-CA3: repetir a ação sobre estado que já mudou devolve CONFLITO e não audita de novo', async () => {
     const { m, senha } = await chamada();
     await confirmarChegada(deps(), { senhaId: senha.id, por: motorista(m) });
     const de_novo = await confirmarChegada(deps(), { senhaId: senha.id, por: motorista(m) });

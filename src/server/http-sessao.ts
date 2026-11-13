@@ -1,13 +1,13 @@
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { validarSessao, type TipoUsuario, type UsuarioAutenticado } from '@/server/auth';
 
 const COOKIE: Record<TipoUsuario, string> = { MOTORISTA: 'csm_sessao', ADMIN: 'csm_admin' };
 const QUATROCENTOS_DIAS_S = 400 * 24 * 60 * 60;
 
-export const authDeps = () => ({ db, clock: relogioSistema });
+export const authDeps = () => ({ db, clock: relogioApp });
 
 /**
  * IP do cliente para o limite de tentativas (RF01-CA4). Nunca o primeiro valor de

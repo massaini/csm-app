@@ -1,4 +1,4 @@
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { varrer } from '@/server/senhas';
 
@@ -7,7 +7,7 @@ export const INTERVALO_DO_JOB_MS = 30_000;
 export function iniciarJob() {
   const rodar = async () => {
     try {
-      const r = await varrer({ db, clock: relogioSistema });
+      const r = await varrer({ db, clock: relogioApp });
       if (r.expiradas || r.canceladasNaVirada || r.concluidasNaVirada) {
         console.info(JSON.stringify({ nivel: 'info', evento: 'job.varredura', ...r }));
       }

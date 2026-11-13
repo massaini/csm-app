@@ -1,6 +1,6 @@
 'use server';
 
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { exigirAdmin } from '@/server/http-sessao';
 import { enviarChamada } from '@/server/push';
@@ -18,7 +18,7 @@ export interface RespostaAdmin {
   aviso?: string;
 }
 
-const deps = () => ({ db, clock: relogioSistema });
+const deps = () => ({ db, clock: relogioApp });
 
 const AVISOS: Partial<Record<CodigoResultado, string>> = {
   CONFLITO: 'A senha mudou de estado ou a bancada está ocupada. A lista foi atualizada.',

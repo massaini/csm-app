@@ -14,7 +14,7 @@ function arquivos(dir: string, acc: string[] = []): string[] {
     if (nome === 'node_modules' || nome === 'generated') continue;
     const p = join(dir, nome);
     if (statSync(p).isDirectory()) arquivos(p, acc);
-    else if (/\.test\.ts$/.test(nome)) acc.push(p);
+    else if (/\.(test|spec)\.ts$/.test(nome)) acc.push(p);
   }
   return acc;
 }
@@ -24,7 +24,7 @@ const exigidos = new Set([...prd.matchAll(/\*\*(RN?F\d{2}-CA\d+)\*\*/g)].map((m)
 
 const cobertos = new Set<string>();
 const titulo = /\b(it|test)(\.each\([^)]*\))?\(\s*(['"`])((?:\\.|(?!\3).)*)\3/g;
-for (const f of [...arquivos('src'), ...arquivos('tests')]) {
+for (const f of [...arquivos('src'), ...arquivos('tests'), ...arquivos('e2e')]) {
   const src = readFileSync(f, 'utf-8');
   for (const m of src.matchAll(titulo)) {
     for (const id of m[4].match(ID) ?? []) cobertos.add(id);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { usuarioAtual } from '@/server/http-sessao';
 import { inscrever } from '@/server/push';
@@ -18,6 +18,6 @@ export async function POST(req: Request) {
   if (!motorista) return NextResponse.json({ erro: 'nao_autenticado' }, { status: 401 });
   const corpo = esquema.safeParse(await req.json().catch(() => null));
   if (!corpo.success) return NextResponse.json({ erro: 'inscricao_invalida' }, { status: 400 });
-  await inscrever({ db, clock: relogioSistema }, motorista.id, corpo.data);
+  await inscrever({ db, clock: relogioApp }, motorista.id, corpo.data);
   return NextResponse.json({ ok: true });
 }

@@ -24,7 +24,7 @@ export function SairMotorista() {
       type="button"
       disabled={saindo}
       onClick={() => void sair()}
-      className="t-body-m text-text-secondary underline disabled:opacity-50"
+      className="t-body-m inline-flex min-h-[44px] items-center text-text-secondary underline disabled:opacity-50"
     >
       {saindo ? 'Saindo…' : 'Sair'}
     </button>

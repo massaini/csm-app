@@ -19,7 +19,9 @@
     "test:ca-coverage": "tsx scripts/ca-coverage.ts",
     "db:up": "docker compose up -d --wait",
     "admin:transferir-super": "tsx scripts/admin.ts transferir-super",
-    "admin:redefinir-senha": "tsx scripts/admin.ts redefinir-senha"
+    "admin:redefinir-senha": "tsx scripts/admin.ts redefinir-senha",
+    "test:e2e": "playwright test",
+    "test:load": "tsx scripts/carga.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

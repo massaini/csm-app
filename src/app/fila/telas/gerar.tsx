@@ -107,7 +107,7 @@ export function TelaGerar({ estado, fila }: { estado: EstadoDa<'GERAR'>; fila: F
         </div>
         <Link
           href="/historico"
-          className="t-button-m rounded-full border border-primary/70 px-base py-sm text-primary"
+          className="t-button-m inline-flex min-h-[44px] items-center rounded-full border border-primary/70 px-base text-primary"
         >
           Histórico
         </Link>
@@ -124,7 +124,10 @@ export function TelaGerar({ estado, fila }: { estado: EstadoDa<'GERAR'>; fila: F
         </p>
       ) : null}
       {geo?.estado === 'IMPRECISA' ? (
-        <button className="t-body-s self-start text-primary underline" onClick={() => void ler()}>
+        <button
+          className="t-body-s inline-flex min-h-[44px] items-center self-start text-primary underline"
+          onClick={() => void ler()}
+        >
           Tentar novamente
         </button>
       ) : null}

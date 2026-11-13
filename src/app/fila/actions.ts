@@ -1,6 +1,6 @@
 'use server';
 
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import {
   estadoDoMotorista,
@@ -23,7 +23,7 @@ export interface RespostaDaAcao {
   estado: EstadoMotorista;
 }
 
-const deps = () => ({ db, clock: relogioSistema });
+const deps = () => ({ db, clock: relogioApp });
 
 const MENSAGENS: Partial<Record<CodigoResultado, string>> = {
   FORA_DO_RAIO: 'Você está fora do pátio. Aproxime-se ou peça liberação ao administrador.',

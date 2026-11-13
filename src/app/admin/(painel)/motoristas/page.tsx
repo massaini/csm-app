@@ -1,4 +1,4 @@
-import { relogioSistema } from '@/domain/clock';
+import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { listarMotoristas } from '@/server/cadastros';
 import { exigirAdmin } from '@/server/http-sessao';
@@ -9,7 +9,7 @@ export const metadata = { title: 'Motoristas · Painel CSM' };
 export default async function PaginaMotoristas() {
   await exigirAdmin();
   const [inicial, regioes] = await Promise.all([
-    listarMotoristas({ db, clock: relogioSistema }),
+    listarMotoristas({ db, clock: relogioApp }),
     db.regiao.findMany({
       where: { ativa: true },
       orderBy: { codigo: 'asc' },

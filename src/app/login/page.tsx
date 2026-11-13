@@ -32,7 +32,10 @@ export default async function PaginaLogin() {
             termos de uso da CSM
           </Link>
         </p>
-        <Link href="/instalar" className="t-caption mt-sm inline-block text-primary underline">
+        <Link
+          href="/instalar"
+          className="t-caption mt-xs inline-flex min-h-[44px] items-center text-primary underline"
+        >
           Como instalar o app
         </Link>
       </footer>

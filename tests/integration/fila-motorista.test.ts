@@ -196,7 +196,7 @@ describe('Aguardando, Chamado e Em atendimento', () => {
     });
   });
 
-  it('RF13-CA1: a tela Chamado recebe prazo, limite com carência e a tolerância gravada', async () => {
+  it('RF13-CA1 / RF13-CA7: a tela Chamado recebe prazo, limite com carência e a tolerância gravada', async () => {
     const m = await novoMotorista(c.regiao.id);
     const s = await gerar(m.id);
     const ch = await chamarSenha(deps(), { senhaId: s.id, adminId: c.admin.id });

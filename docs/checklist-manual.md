@@ -8,6 +8,7 @@ ida para produção e registrar data, aparelho e resultado. Enquanto um item est
 |---|---|---|
 | RF05-CA4 | iPhone (iOS 16.4+), Safari **sem** instalar: abrir `/notificacoes` logo após o login → aparecem as instruções de instalação, não o botão. | [ ] pendente |
 | RF23-CA1 | Chrome DevTools → Application → Manifest sem erros de instalabilidade; instalar em 1 Android (Chrome) e 1 iPhone (Safari → Adicionar à Tela de Início). | [ ] pendente |
+| RNF01-CA3 | `npm run test:load` contra o staging (URL_BASE, COOKIE_MOTORISTA, COOKIE_ADMIN): p95 ≤ 500 ms e 0 erros. | [ ] pendente |
 | RNF01-CA4 | Lighthouse mobile (4G simulado) em `/login` e `/fila`: LCP ≤ 2,5 s. | [ ] pendente |
 | RNF02-CA5 | No domínio do Railway: `http://` redireciona para `https://` e o cookie de sessão sai com `Secure`. | [ ] pendente |
 | RNF04-CA3 | Screenshots do Playwright (390×844 e 1440×900) lado a lado com o Figma, tela a tela (10:2, 233:440, 12:2, 13:2, 144:447, 18:2, 19:2, 19:35, 19:64, 170:26, 171:95, 172:170, 216:470). | [ ] pendente |

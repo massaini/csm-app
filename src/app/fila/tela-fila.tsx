@@ -63,7 +63,10 @@ export function TelaFila({
           className="flex items-center justify-between gap-md bg-danger px-base py-sm"
         >
           <span className="t-body-s">Sem conexão. Verifique sua internet e tente novamente.</span>
-          <button className="t-button-m underline" onClick={() => void fila.recarregar()}>
+          <button
+            className="t-button-m inline-flex min-h-[44px] items-center underline"
+            onClick={() => void fila.recarregar()}
+          >
             Tentar novamente
           </button>
         </div>
