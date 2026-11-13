@@ -2,10 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { POLLING_COM_SSE_MS, POLLING_SEM_SSE_MS, useEventos } from '@/components/use-eventos';
 import type { EstadoMotorista } from '@/server/fila-motorista';
 import type { RespostaDaAcao } from './actions';
 
-const POLLING_MS = 4_000; // RNF01-CA1: fallback sem SSE
 const ESPERAS_REPETICAO_MS = [1_000, 2_000, 4_000]; // RF30-CA1: 1 envio + 3 repetições
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -46,8 +46,10 @@ export function useEstadoFila(inicial: EstadoMotorista) {
     }
   }, [aplicar, router]);
 
+  const sseConectado = useEventos('/api/stream', () => void recarregar());
+
   useEffect(() => {
-    const id = setInterval(recarregar, POLLING_MS);
+    const id = setInterval(recarregar, sseConectado ? POLLING_COM_SSE_MS : POLLING_SEM_SSE_MS);
     const aoVoltar = () => {
       if (document.visibilityState === 'visible') void recarregar();
     };
@@ -56,7 +58,7 @@ export function useEstadoFila(inicial: EstadoMotorista) {
       clearInterval(id);
       document.removeEventListener('visibilitychange', aoVoltar);
     };
-  }, [recarregar]);
+  }, [recarregar, sseConectado]);
 
   /** Executa uma ação com repetição automática em falha de rede (RF30). */
   const executar = useCallback(

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
+import { POLLING_COM_SSE_MS, useEventos } from '@/components/use-eventos';
 import type { Consulta } from '@/server/filtros-admin';
 
 type RespostaConsulta<T> = { tipo: 'ok'; dados: T } | { tipo: 'login' } | { tipo: 'erro' };
@@ -49,17 +50,23 @@ export function useConsulta<T>(consulta: Consulta, pollingMs?: number) {
     [chave, router],
   );
 
+  // tempo real só nas telas ao vivo (com polling); os históricos carregam sob demanda
+  const sseConectado = useEventos(
+    pollingMs ? '/api/stream?perfil=admin' : '',
+    () => void recarregar(),
+  );
+
   useEffect(() => {
     void recarregar();
     if (!pollingMs) return;
-    const id = setInterval(recarregar, pollingMs);
+    const id = setInterval(recarregar, sseConectado ? POLLING_COM_SSE_MS : pollingMs);
     const aoVoltar = () => document.visibilityState === 'visible' && void recarregar();
     document.addEventListener('visibilitychange', aoVoltar);
     return () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', aoVoltar);
     };
-  }, [recarregar, pollingMs]);
+  }, [recarregar, pollingMs, sseConectado]);
 
   return { dados, erro, recarregar };
 }

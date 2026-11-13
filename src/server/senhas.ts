@@ -3,6 +3,7 @@ import type { Clock } from '@/domain/clock';
 import { limitesDoDia, codigoSenha } from '@/domain/dia';
 import { normalizarPlaca, placaValida } from '@/domain/documentos';
 import { avaliarGeofence } from '@/domain/geofence';
+import { notificar } from '@/server/realtime';
 
 export interface Deps {
   db: PrismaClient;
@@ -51,6 +52,8 @@ async function auditar(
       instante: agora,
     },
   });
+  // toda transição auditada também avisa o tempo real (entregue no commit da transação)
+  await notificar(tx, { senhaId: Number(senhaId) });
 }
 
 /**

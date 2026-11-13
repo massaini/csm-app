@@ -3,6 +3,7 @@ import { hash, verify } from '@node-rs/argon2';
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import type { Clock } from '@/domain/clock';
 import { cpfValido, somenteDigitos } from '@/domain/documentos';
+import { notificar } from '@/server/realtime';
 
 export type TipoUsuario = 'MOTORISTA' | 'ADMIN';
 
@@ -318,6 +319,7 @@ export async function desativarUsuario(
         select: { id: true },
       });
       for (const { id } of ativas) {
+        await notificar(tx, { senhaId: id });
         await tx.senha.update({
           where: { id },
           data: {
