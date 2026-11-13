@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { verify } from '@node-rs/argon2';
+import type { Prisma } from '@/generated/prisma/client';
 import {
   LIMITES,
   MENSAGEM_LOGIN_INVALIDO,
@@ -28,7 +29,9 @@ let motoristaId: number;
 const deps = () => ({ db, clock });
 
 async function criarMotorista(
-  extra: Partial<Parameters<typeof db.motorista.create>[0]['data']> = {},
+  extra: Partial<
+    Pick<Prisma.MotoristaUncheckedCreateInput, 'deveTrocarSenha' | 'senhaTemporariaExpiraEm'>
+  > = {},
 ) {
   const m = await db.motorista.create({
     data: {

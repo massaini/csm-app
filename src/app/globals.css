@@ -1,26 +1,129 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tokens do Design System (PRD §10 / Figma `01 · Design System`). Tema único escuro. */
+@theme {
+  --color-bg: #050b1f;
+  --color-surface: #0a1f3d;
+  --color-elevated: #12315a;
+  --color-primary: #f5c518;
+  --color-primary-soft: #ffe082;
+  --color-on-primary: #050b1f;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #c9d1dc;
+  --color-text-muted: #8892a5;
+  --color-border: #12315a;
+  --color-border-strong: #2a4a7f;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-base: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 40px;
+  --spacing-4xl: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-bg);
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Text styles do Figma: tamanho / altura de linha / peso / espaçamento entre letras */
+@layer components {
+  .t-display-xl {
+    font-size: 72px;
+    line-height: 76px;
+    font-weight: 700;
+    letter-spacing: -2px;
+  }
+  .t-display-l {
+    font-size: 56px;
+    line-height: 60px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+  }
+  .t-display-m {
+    font-size: 40px;
+    line-height: 48px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  .t-title-l {
+    font-size: 28px;
+    line-height: 34px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+  }
+  .t-title-m {
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 600;
+  }
+  .t-title-s {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+  .t-body-l {
+    font-size: 17px;
+    line-height: 24px;
+    font-weight: 400;
+  }
+  .t-body-m {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 400;
+  }
+  .t-body-m-strong {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 600;
+  }
+  .t-body-s {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+  }
+  .t-caption {
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+  }
+  .t-overline {
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .t-button-l {
+    font-size: 17px;
+    line-height: 22px;
+    font-weight: 600;
+  }
+  .t-button-m {
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+  }
 }
