@@ -3,7 +3,11 @@
  * configuração, raio, nomes, `ativo` nem a senha do super-admin já existentes.
  * Dados fictícios só com NODE_ENV=development.
  */
+import { loadEnvConfig } from '@next/env';
 import { hash } from '@node-rs/argon2';
+
+// O Prisma 7 não lê o .env sozinho; mesmo carregador do Next, sem sobrescrever o ambiente
+loadEnvConfig(process.cwd());
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
 

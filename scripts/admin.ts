@@ -3,11 +3,16 @@
  *   npm run admin:transferir-super -- --cpf=<cpf>
  *   npm run admin:redefinir-senha -- --cpf=<cpf>
  */
+import { loadEnvConfig } from '@next/env';
 import { PrismaPg } from '@prisma/adapter-pg';
+
 import { PrismaClient } from '../src/generated/prisma/client';
 import { relogioSistema } from '../src/domain/clock';
 import { somenteDigitos } from '../src/domain/documentos';
 import { redefinirSenhaDoAdmin, transferirSuperAdmin } from '../src/server/cadastros';
+
+// O Prisma 7 não lê o .env sozinho; mesmo carregador do Next, sem sobrescrever o ambiente
+loadEnvConfig(process.cwd());
 
 async function main() {
   const [comando] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
