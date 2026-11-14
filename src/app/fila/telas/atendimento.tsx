@@ -5,6 +5,7 @@ import { Card, Chip, InfoRow } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
 import { Logo } from '@/components/ui/logo';
+import { formatarCronometro } from '@/domain/formato';
 import { acaoConcluir } from '../actions';
 import type { EstadoDa, Fila } from '../tela-fila';
 import { useTique } from '../use-estado-fila';
@@ -15,12 +16,6 @@ const horaMinuto = (iso: string) =>
     minute: '2-digit',
     timeZone: 'America/Sao_Paulo',
   });
-
-function hhmmss(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
-}
 
 /** Tela `19:2` — Em atendimento, com o botão novo "Concluir atendimento" (RF14). */
 export function TelaAtendimento({
@@ -56,7 +51,7 @@ export function TelaAtendimento({
       {/* RF14-CA5: só o cronômetro, sem a barra de etapas do Figma */}
       <Card className="flex items-center justify-between">
         <p className="t-overline text-text-muted">Carregamento</p>
-        <p className="t-title-m tabular-nums">{hhmmss(decorrido)}</p>
+        <p className="t-title-m tabular-nums">{formatarCronometro(decorrido)}</p>
       </Card>
 
       <Card>

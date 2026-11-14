@@ -106,8 +106,12 @@ test('RNF02-CA4: buscar motorista por CPF no painel não põe o CPF em nenhuma U
   await admin.getByPlaceholder('Nome ou CPF').fill(CPF.joao);
   await expect(admin.getByRole('cell', { name: 'João da Silva' })).toBeVisible();
   await admin.goto('/admin');
+  // espera a busca sair: o CPF tem de ir no corpo do POST, não na URL
+  const busca = admin.waitForRequest(
+    (r) => r.url().endsWith('/api/admin/consulta') && (r.postData() ?? '').includes(CPF.maria),
+  );
   await admin.getByPlaceholder('Buscar nome ou CPF').fill(CPF.maria);
-  await admin.waitForTimeout(1_000);
+  expect((await busca).method()).toBe('POST');
   const comCpf = urls.filter(
     (u) => u.includes(CPF.joao) || u.includes(CPF.maria) || u.includes(CPF.superAdmin),
   );

@@ -235,3 +235,30 @@ Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx 
 
 Pendências: nenhuma neste item.
 
+## Iteração 9 — 2026-11-14 — FE-09 · Testes de front end
+
+Como foi inspecionado: inventário dos testes (Vitest: domínio, integração e service worker;
+Playwright: 44 testes de tela em 7 specs, incluindo os novos de acessibilidade, estados e rotas
+desta revisão); módulos de src/domain sem teste (só clock.ts, que é a interface do relógio);
+lógica que morava dentro das telas sem teste; sinais de fragilidade (waitForTimeout, only, skip,
+fixme, force).
+
+Arquivos alterados:
+- src/domain/formato.ts (+ formato.test.ts) — formatarContagem ("m:ss") estava copiada na Fila ao
+  Vivo e na tela Chamado; formatarCronometro ("hh:mm:ss") ficava dentro da tela Em atendimento.
+  As duas foram para o domínio, com testes de arredondamento, zero e valores negativos
+  (RF13-CA1, RF14-CA1).
+- chamado.tsx, atendimento.tsx, fila-ao-vivo.tsx — usam as funções do domínio.
+- src/components/admin/comum.test.ts (novo) — tentar(): resultado normal e falha virando null.
+- e2e/acesso.spec.ts — RNF02-CA4 esperava 1 s fixo pela busca; agora espera o POST de
+  /api/admin/consulta com o CPF no corpo, o que também prova que ele não vai na URL.
+
+Mantido: os hooks com EventSource/polling (use-eventos, use-estado-fila, useConsulta) seguem
+cobertos pelo E2E (RNF01, RF11, RF30); teste unitário deles exigiria jsdom e Testing Library,
+dependências novas que o PRD (§9.6) não prevê.
+
+Verificações: npm test 181 ok, test:ca-coverage 152/152, npm run lint ok, tsc ok,
+npm run build ok, npx playwright test 46/46.
+
+Pendências: nenhuma neste item.
+

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatarDataHora, formatarDia, formatarDiaHora, paraCsv } from './formato';
+import {
+  formatarContagem,
+  formatarCronometro,
+  formatarDataHora,
+  formatarDia,
+  formatarDiaHora,
+  paraCsv,
+} from './formato';
 
 describe('formatação', () => {
   it('RNF04-CA4: datas e horas em America/Sao_Paulo, formato brasileiro', () => {
@@ -26,5 +33,23 @@ describe('CSV', () => {
   it('RF22-CA3: escapa aspas e separadores dentro do valor', () => {
     const csv = paraCsv(['c'], [['João "Zé"; Silva'], [null]]);
     expect(csv).toBe('﻿c\r\n"João ""Zé""; Silva"\r\n\r\n');
+  });
+});
+
+describe('contagem e cronômetro das telas', () => {
+  it('RF13-CA1: a contagem regressiva arredonda para cima e para em 0:00', () => {
+    expect(formatarContagem(5 * 60_000)).toBe('5:00');
+    expect(formatarContagem(4 * 60_000 + 59_001)).toBe('5:00');
+    expect(formatarContagem(61_000)).toBe('1:01');
+    expect(formatarContagem(999)).toBe('0:01');
+    expect(formatarContagem(0)).toBe('0:00');
+    expect(formatarContagem(-30_000)).toBe('0:00');
+  });
+
+  it('RF14-CA1: o cronômetro do carregamento mostra hh:mm:ss e não fica negativo', () => {
+    expect(formatarCronometro(0)).toBe('00:00:00');
+    expect(formatarCronometro(12 * 60_000 + 34_900)).toBe('00:12:34');
+    expect(formatarCronometro(3_600_000 + 5_000)).toBe('01:00:05');
+    expect(formatarCronometro(-1_000)).toBe('00:00:00');
   });
 });

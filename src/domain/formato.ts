@@ -39,3 +39,16 @@ export function paraCsv(cabecalho: string[], linhas: (string | number | null)[][
   const corpo = [cabecalho, ...linhas].map((l) => l.map(celula).join(';')).join('\r\n');
   return `﻿${corpo}\r\n`;
 }
+
+/** Contagem regressiva "m:ss", arredondando para cima e sem passar de zero (RF13, RF17). */
+export function formatarContagem(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** Cronômetro "hh:mm:ss" do carregamento, contado desde a chamada (RF14). */
+export function formatarCronometro(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
+}

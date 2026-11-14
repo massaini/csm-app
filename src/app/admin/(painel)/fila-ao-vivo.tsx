@@ -16,7 +16,7 @@ import {
 } from '@/components/admin/comum';
 import { Chip, MensagemDeErro } from '@/components/ui/basicos';
 import { Confirmacao } from '@/components/ui/confirmacao';
-import { formatarDia } from '@/domain/formato';
+import { formatarContagem, formatarDia } from '@/domain/formato';
 import type { Consulta } from '@/server/filtros-admin';
 import type { FilaAoVivo as Dados, LinhaFila } from '@/server/painel';
 import { acaoChamar, acaoConcluir, acaoConfirmarChegada, type RespostaAdmin } from './actions';
@@ -37,11 +37,6 @@ const subtitulo = (iso: string) => {
   return `Estado em tempo real · ${data.charAt(0).toUpperCase()}${data.slice(1)} — ${hora}`;
 };
 
-function mmss(ms: number) {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
-
 /** Contagem até o fim da tolerância: só esta célula re-renderiza a cada segundo. */
 function ContagemAtePrazo({ prazoEm, agoraIso }: { prazoEm: string; agoraIso: string }) {
   const agora = useAgoraServidor(agoraIso);
@@ -50,7 +45,7 @@ function ContagemAtePrazo({ prazoEm, agoraIso }: { prazoEm: string; agoraIso: st
       className="t-body-s tabular-nums text-text-secondary"
       title="Tempo até o fim da tolerância"
     >
-      {agora === null ? '—' : mmss(Date.parse(prazoEm) - agora)}
+      {agora === null ? '—' : formatarContagem(Date.parse(prazoEm) - agora)}
     </span>
   );
 }

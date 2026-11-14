@@ -1,14 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { formatarContagem } from '@/domain/formato';
 import { acaoEstouACaminho } from '../actions';
 import type { EstadoDa, Fila } from '../tela-fila';
 import { useTique } from '../use-estado-fila';
-
-function mmss(ms: number) {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
 
 /** Tela `18:2` — Chamado. RF13: contagem pelo relógio do servidor e "Confirme agora" na carência. */
 export function TelaChamado({ estado, fila }: { estado: EstadoDa<'CHAMADA'>; fila: Fila }) {
@@ -61,7 +57,7 @@ export function TelaChamado({ estado, fila }: { estado: EstadoDa<'CHAMADA'>; fil
         </p>
         {restante > 0 ? (
           <p className="t-body-m-strong mt-xs text-center" aria-live="polite">
-            Restam {mmss(restante)}
+            Restam {formatarContagem(restante)}
           </p>
         ) : null}
       </div>
