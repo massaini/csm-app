@@ -23,6 +23,21 @@ export function formatarCpf(cpf: string): string {
   return saida;
 }
 
+/**
+ * Máscara progressiva de telefone com DDD: "(11) 3456-7890" (fixo, 10 dígitos) ou
+ * "(11) 98765-4321" (celular, 11 dígitos). Armazenado só com dígitos.
+ */
+export function formatarTelefone(telefone: string): string {
+  const d = somenteDigitos(telefone).slice(0, 11);
+  if (d.length === 0) return '';
+  if (d.length <= 2) return `(${d}`;
+  const ddd = d.slice(0, 2);
+  const resto = d.slice(2);
+  if (resto.length <= 4) return `(${ddd}) ${resto}`;
+  const corte = d.length === 11 ? 5 : 4;
+  return `(${ddd}) ${resto.slice(0, corte)}-${resto.slice(corte)}`;
+}
+
 export function mascararCpf(cpf: string): string {
   const d = somenteDigitos(cpf);
   return d.length === 11 ? `***.***.***-${d.slice(9)}` : '***';

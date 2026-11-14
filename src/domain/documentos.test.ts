@@ -3,6 +3,7 @@ import {
   cpfValido,
   formatarCpf,
   formatarPlaca,
+  formatarTelefone,
   mascararCpf,
   normalizarPlaca,
   placaValida,
@@ -26,6 +27,24 @@ describe('CPF', () => {
     expect(formatarCpf('5299')).toBe('529.9');
     expect(mascararCpf('529.982.247-25')).toBe('***.***.***-25');
     expect(mascararCpf('abc')).toBe('***');
+  });
+});
+
+describe('Telefone', () => {
+  it('RF24-CA1: formata celular (11 dígitos) e fixo (10 dígitos) com DDD', () => {
+    expect(formatarTelefone('11987654321')).toBe('(11) 98765-4321');
+    expect(formatarTelefone('1134567890')).toBe('(11) 3456-7890');
+    expect(formatarTelefone('(11) 98765-4321')).toBe('(11) 98765-4321');
+  });
+
+  it('RF24-CA1: a máscara é progressiva enquanto se digita e ignora o excesso', () => {
+    expect(formatarTelefone('')).toBe('');
+    expect(formatarTelefone('1')).toBe('(1');
+    expect(formatarTelefone('11')).toBe('(11');
+    expect(formatarTelefone('119')).toBe('(11) 9');
+    expect(formatarTelefone('119876')).toBe('(11) 9876');
+    expect(formatarTelefone('1198765')).toBe('(11) 9876-5');
+    expect(formatarTelefone('119876543210000')).toBe('(11) 98765-4321');
   });
 });
 

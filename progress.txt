@@ -1,0 +1,21 @@
+# Progresso da revisão do front end (PRD §13)
+
+Uma entrada por iteração: item trabalhado, arquivos alterados, problemas encontrados,
+verificações e pendências.
+
+## Iteração 1 — 2026-11-14 — FE-01 · Telefone sem formatação
+
+Também nesta iteração: criada a seção 13 do docs/PRD.md (checklist FE-01 a FE-09) e este arquivo.
+
+Arquivos alterados:
+- src/domain/documentos.ts — nova formatarTelefone (máscara progressiva; fixo "(11) 3456-7890", celular "(11) 98765-4321"; corta acima de 11 dígitos).
+- src/domain/documentos.test.ts — 2 testes (formatos completos e digitação progressiva).
+- src/app/admin/(painel)/motoristas/motoristas.tsx — campo Telefone formata ao digitar e ao abrir a edição; tabela mostra o telefone formatado, numa linha só.
+- docs/PRD.md — seção 13 (checklist) e FE-01 marcado.
+
+Problemas encontrados:
+- O campo aceitava texto livre e a tabela exibia só dígitos (o servidor já gravava só dígitos e validava 10–11 dígitos; isso não mudou).
+
+Verificações: npm test (177 testes) ok · npm run lint ok · npm run build ok.
+
+Pendências: nenhuma neste item.

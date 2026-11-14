@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
 import { Dialogo, SenhaTemporaria } from '@/components/ui/dialogo';
 import { Field } from '@/components/ui/field';
-import { formatarCpf } from '@/domain/documentos';
+import { formatarCpf, formatarTelefone } from '@/domain/documentos';
 import type { MotoristaListado } from '@/server/cadastros';
 import {
   alterarAtivoMotorista,
@@ -109,7 +109,9 @@ export function Motoristas({
             <td className="t-body-s whitespace-nowrap px-base py-md tabular-nums text-text-secondary">
               {formatarCpf(m.cpf)}
             </td>
-            <td className="t-body-s px-base py-md text-text-secondary">{m.telefone ?? '—'}</td>
+            <td className="t-body-s whitespace-nowrap px-base py-md tabular-nums text-text-secondary">
+              {m.telefone ? formatarTelefone(m.telefone) : '—'}
+            </td>
             <td className="t-body-s px-base py-md text-text-secondary">{m.regiao}</td>
             <td className="px-base py-md">
               <div className="flex flex-wrap gap-xs">
@@ -228,7 +230,7 @@ function FormMotorista({
 }) {
   const [nome, setNome] = useState(motorista?.nome ?? '');
   const [cpf, setCpf] = useState(motorista ? formatarCpf(motorista.cpf) : '');
-  const [telefone, setTelefone] = useState(motorista?.telefone ?? '');
+  const [telefone, setTelefone] = useState(formatarTelefone(motorista?.telefone ?? ''));
   const [regiaoId, setRegiaoId] = useState(motorista?.regiaoId ?? regioes[0]?.id ?? 0);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
@@ -266,7 +268,7 @@ function FormMotorista({
         inputMode="tel"
         placeholder="(11) 98765-4321"
         value={telefone}
-        onChange={(e) => setTelefone(e.target.value)}
+        onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
         erro={erros.telefone}
       />
       <label className="flex flex-col gap-xs">

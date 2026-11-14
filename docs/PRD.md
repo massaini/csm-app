@@ -824,3 +824,24 @@ Cada linha traz o que o texto acima adota. As marcadas com **✔** foram confirm
 | 0.3 | 2026-11-10 | Decisões do cliente: P03, P06, P07, P15 e P17 confirmadas; P21 muda a métrica de comparação para "tempo até iniciar o carregamento". Tabela de seed (locais, coordenadas, galpões) restaurada na 6.0. |
 | 0.4 | 2026-11-10 | Segunda revisão adversarial (29 achados). P16, P18 e P19 confirmadas. Perda de vez só depois da carência; escritas persistem a expiração; contrato `CONFLITO` das mutações; `/admin/trocar-senha`; seed só cria; virada com predicados exatos; `HORA_VIRADA` vira variável de ambiente; KPIs e filtros fechados; 9.6 lista todos os CAs por camada; novos CAs (RF04-CA3, RF08-CA6, RF10-CA6/CA7, RF17-CA10, RF18-CA6, RF20-CA6, RF21-CA5, RF23-CA3, RF25-CA6, RNF06-CA1); P25–P27. |
 | 0.5 | 2026-11-11 | P25 confirmada: bancada atende um por vez, então chamar para bancada ocupada é bloqueado (RF18-CA6, RF17-CA5) em vez de apenas avisar. P26: 180 motoristas. |
+
+---
+
+## 13. Checklist de revisão do front end
+
+Revisão geral antes do deploy. Um item só é marcado `[x]` depois de inspecionar de fato os
+arquivos correspondentes, corrigir o que foi achado e ver `npm test`, `npm run lint` e
+`npm run build` passarem. O registro de cada item (arquivos, achados, pendências) fica em
+`progress.txt`. Problemas encontrados fora do item em andamento entram aqui como itens novos.
+
+Ordem = prioridade.
+
+- [x] **FE-01 · (d) Telefone sem formatação** — o campo do cadastro de motoristas não aplica máscara e a tabela mostra só dígitos (relatado no ensaio local).
+- [ ] **FE-02 · (f) Erros e warnings** no console do navegador (todas as telas) e no build.
+- [ ] **FE-03 · (b) Acessibilidade** — semântica HTML, labels, alt text, contraste, navegação por teclado, foco visível.
+- [ ] **FE-04 · (c) Estados de UI** — loading, erro, vazio e sucesso em cada tela e ação.
+- [ ] **FE-05 · (g) Textos, links e rotas** — textos (ortografia, padrão pt-BR), links quebrados e rotas inexistentes.
+- [ ] **FE-06 · (a) Estrutura de componentes e páginas** — duplicação, componentes órfãos, props não utilizadas.
+- [ ] **FE-07 · (d) Consistência visual** — espaçamentos, tipografia, cores e componentes repetidos, comparando com o Figma.
+- [ ] **FE-08 · (e) Performance básica** — tamanho de imagens e bundle, re-renders desnecessários, imports pesados.
+- [ ] **FE-09 · (h) Testes de front end** — cobertura e qualidade dos testes dos componentes e telas.
