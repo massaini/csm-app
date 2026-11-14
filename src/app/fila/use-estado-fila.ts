@@ -20,7 +20,7 @@ export function useEstadoFila(inicial: EstadoMotorista) {
   const [semConexao, setSemConexao] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const router = useRouter();
-  const desvioRef = useRef(0);
+  const desvioRef = useRef<number | null>(null);
   useEffect(() => {
     desvioRef.current = Date.parse(inicial.agora) - Date.now();
   }, [inicial.agora]);
@@ -87,7 +87,11 @@ export function useEstadoFila(inicial: EstadoMotorista) {
   );
 
   /** "Agora" no relógio do servidor. */
-  const agoraServidor = useCallback(() => Date.now() + desvioRef.current, []);
+  const agoraDoEstado = Date.parse(estado.agora);
+  const agoraServidor = useCallback(
+    () => (desvioRef.current === null ? agoraDoEstado : Date.now() + desvioRef.current),
+    [agoraDoEstado],
+  );
 
   return { estado, semConexao, enviando, recarregar, executar, agoraServidor };
 }
