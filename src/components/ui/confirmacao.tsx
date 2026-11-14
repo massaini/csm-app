@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Button } from './button';
 
 /**
@@ -29,6 +29,7 @@ export function Confirmacao({
   aoFechar: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const id = useId();
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -39,11 +40,17 @@ export function Confirmacao({
   return (
     <dialog
       ref={ref}
+      aria-labelledby={`${id}-titulo`}
+      aria-describedby={`${id}-texto`}
       onClose={aoFechar}
       className="m-auto w-[calc(100%-48px)] max-w-[342px] rounded-lg border border-border-strong bg-surface p-xl text-text-primary backdrop:bg-black/70"
     >
-      <h2 className="t-title-m">{titulo}</h2>
-      <p className="t-body-m mt-md text-text-secondary">{texto}</p>
+      <h2 id={`${id}-titulo`} className="t-title-m">
+        {titulo}
+      </h2>
+      <p id={`${id}-texto`} className="t-body-m mt-md text-text-secondary">
+        {texto}
+      </p>
       <div className="mt-xl flex flex-col gap-md">
         <Button kind={perigo ? 'danger' : 'primary'} disabled={pendente} onClick={aoConfirmar}>
           {confirmar}

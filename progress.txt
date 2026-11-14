@@ -48,3 +48,37 @@ Verificações: npm test ok, npm run lint ok, npm run build ok, tsc ok, npx play
 
 Pendências: nenhuma neste item.
 
+## Iteração 3 — 2026-11-14 — FE-03 · Acessibilidade
+
+Como foi inspecionado: auditoria automática com axe-core (WCAG 2.1 A/AA) em todas as telas e
+estados — motorista: /login, /instalar, /termos, /trocar-senha, /notificacoes, /fila (sem senha,
+aguardando, confirmar cancelamento, chamado, em atendimento, confirmar conclusão, concluído),
+/historico (vazio e com atendimento), /em-breve; painel: /admin/login, Fila ao Vivo com senha,
+Atendimentos, Senhas, Motoristas, Bancadas e Regiões, Configurações, Administradores e o diálogo
+"Novo motorista". Revisão manual: lang="pt-BR", alt do logo, SVGs decorativos com aria-hidden,
+aria-current na Tab Bar e na barra lateral, diálogos nativos (<dialog> com foco preso e Esc),
+elementos clicáveis (nenhum div/span/tr com onClick), contraste dos tokens calculado à mão.
+
+Arquivos alterados:
+- src/app/globals.css — contorno de foco global em :focus-visible (2 px, cor primária). Antes os
+  botões e links dependiam do contorno padrão do navegador.
+- src/components/ui/dialogo.tsx, confirmacao.tsx — nome acessível do diálogo (aria-labelledby
+  no título; a confirmação também ganha aria-describedby no texto).
+- src/app/fila/tela-fila.tsx — banner "Sem conexão": texto branco sobre danger dava 3,8:1;
+  agora texto escuro (on-primary), 5,2:1.
+- e2e/acessibilidade.spec.ts (novo) — axe em todas as telas + login só com teclado, foco
+  visível e Esc/retorno de foco no diálogo do painel.
+- docs/PRD.md (RNF04) — exceções de contraste do Figma registradas: text-muted sobre elevated e
+  danger sobre surface; o teste aceita só esses dois pares.
+- next.config.ts, .gitignore, eslint.config.mjs, tsconfig.json — o E2E usa a pasta .next-e2e,
+  para poder rodar com o `next dev` do desenvolvedor aberto (antes o webServer não subia).
+- package.json — @axe-core/playwright (dev).
+
+Problemas encontrados: sem estilo de foco próprio; diálogos sem nome acessível; contraste do
+banner sem conexão; dois pares de contraste do Figma abaixo do AA (mantidos pelo PRD).
+
+Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, test:ca-coverage
+152/152, npx playwright test 38/38.
+
+Pendências: FE-10 registrado (banco de testes volta sem migrations após reiniciar o Docker).
+

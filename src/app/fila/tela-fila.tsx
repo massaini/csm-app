@@ -60,7 +60,7 @@ export function TelaFila({
       {fila.semConexao ? (
         <div
           role="alert"
-          className="flex items-center justify-between gap-md bg-danger px-base py-sm"
+          className="flex items-center justify-between gap-md bg-danger px-base py-sm text-on-primary"
         >
           <span className="t-body-s">Sem conexão. Verifique sua internet e tente novamente.</span>
           <button

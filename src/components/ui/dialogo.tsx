@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 
 /** Diálogo modal genérico (mesmo visual do overlay `144:447`), para formulários. */
 export function Dialogo({
@@ -17,6 +17,7 @@ export function Dialogo({
   largura?: number;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const idTitulo = useId();
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -26,11 +27,14 @@ export function Dialogo({
   return (
     <dialog
       ref={ref}
+      aria-labelledby={idTitulo}
       onClose={aoFechar}
       style={{ maxWidth: largura }}
       className="m-auto w-[calc(100%-48px)] rounded-lg border border-border-strong bg-surface p-xl text-text-primary backdrop:bg-black/70"
     >
-      <h2 className="t-title-m mb-base">{titulo}</h2>
+      <h2 id={idTitulo} className="t-title-m mb-base">
+        {titulo}
+      </h2>
       {aberto ? children : null}
     </dialog>
   );

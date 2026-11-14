@@ -508,7 +508,7 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RNF04-CA2**: telas do admin sem scroll horizontal a partir de 1280 px.
 - **RNF04-CA3**: fidelidade conferida por screenshots do Playwright (390×844 e 1440×900) comparadas lado a lado com o Figma, em checklist manual.
 - **RNF04-CA4**: textos em pt-BR; datas e horas em `America/Sao_Paulo`, formato brasileiro.
-- **Contraste:** onde o Figma usa um par abaixo do AA (ex.: `text-muted` sobre `elevated`, ~4,2:1), prevalece o Figma. A exceção está registrada aqui.
+- **Contraste:** onde o Figma usa um par abaixo do AA, prevalece o Figma. Exceções registradas: `text-muted` sobre `elevated` (~4,2:1, Option Card selecionado) e `danger` sobre `surface` (~4,4:1, botão Danger do overlay `144:447`). Qualquer outro par segue o AA (4,5:1), verificado pelo axe em `e2e/acessibilidade.spec.ts`.
 
 **RNF05 — Compatibilidade**
 Android: Chrome das 2 últimas versões principais. iPhone: Safari no iOS 16.4+ (push só com o PWA instalado). Admin: Chrome e Edge atuais.
@@ -838,10 +838,11 @@ Ordem = prioridade.
 
 - [x] **FE-01 · (d) Telefone sem formatação** — o campo do cadastro de motoristas não aplica máscara e a tabela mostra só dígitos (relatado no ensaio local).
 - [x] **FE-02 · (f) Erros e warnings** no console do navegador (todas as telas) e no build.
-- [ ] **FE-03 · (b) Acessibilidade** — semântica HTML, labels, alt text, contraste, navegação por teclado, foco visível.
+- [x] **FE-03 · (b) Acessibilidade** — semântica HTML, labels, alt text, contraste, navegação por teclado, foco visível.
 - [ ] **FE-04 · (c) Estados de UI** — loading, erro, vazio e sucesso em cada tela e ação.
 - [ ] **FE-05 · (g) Textos, links e rotas** — textos (ortografia, padrão pt-BR), links quebrados e rotas inexistentes.
 - [ ] **FE-06 · (a) Estrutura de componentes e páginas** — duplicação, componentes órfãos, props não utilizadas.
 - [ ] **FE-07 · (d) Consistência visual** — espaçamentos, tipografia, cores e componentes repetidos, comparando com o Figma.
 - [ ] **FE-08 · (e) Performance básica** — tamanho de imagens e bundle, re-renders desnecessários, imports pesados.
 - [ ] **FE-09 · (h) Testes de front end** — cobertura e qualidade dos testes dos componentes e telas.
+- [ ] **FE-10 · (h) Banco de testes sem migrations** — o `db_test` usa tmpfs e volta vazio quando o Docker reinicia; `npm test` falha (118 testes de integração) até rodar `prisma migrate deploy` à mão. O E2E já migra no `global-setup`; falta o equivalente no Vitest.
