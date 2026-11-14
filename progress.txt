@@ -82,3 +82,38 @@ Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, test
 
 Pendências: FE-10 registrado (banco de testes volta sem migrations após reiniciar o Docker).
 
+## Iteração 4 — 2026-11-14 — FE-04 · Estados de UI (loading, erro, vazio, sucesso)
+
+Como foi inspecionado: leitura de todas as telas e ações. Motorista: login e troca de senha
+(useActionState com pendente e erros), Gerar/Aguardando/Chamado/Atendimento/Resultado
+(enviando, sem conexão com banner e 3 tentativas — RF30), histórico (vazio coberto), notificações
+(ativando, recusa), Sair. Painel: Fila ao Vivo e históricos (useConsulta com carregando, erro,
+vazio e aviso), Motoristas, Bancadas e Regiões, Configurações, Administradores. Boundaries do
+App Router: não havia error.tsx, loading.tsx nem not-found.tsx.
+
+Arquivos alterados:
+- src/components/admin/comum.tsx — `tentar()` e a mensagem FALHA_AO_ENVIAR: falha de rede ou do
+  servidor numa server action vira mensagem, em vez de rejeição não tratada; Tabela ganha o
+  estado `falhou` ("Não foi possível carregar.").
+- motoristas.tsx, administradores.tsx, configuracoes.tsx, bancadas-regioes.tsx — toda ação passa
+  por `tentar()`; antes, uma falha deixava "Salvando…"/"Criando…" travado para sempre e não
+  avisava nada. Confirmações de Motoristas e Administradores ficam desabilitadas enquanto enviam
+  (antes aceitavam clique duplo); formulários de Bancadas e Regiões também ("Salvando…").
+- fila-ao-vivo.tsx, historicos.tsx — se a primeira carga falha, a tabela diz "Não foi possível
+  carregar." em vez de "Carregando…" eterno ao lado do banner de sem conexão.
+- src/app/historico/sair.tsx — "Sair" sem rede avisa e libera o botão (antes: "Saindo…" preso).
+- src/components/ui/estados.tsx (novo) + src/app/error.tsx, src/app/loading.tsx,
+  src/app/admin/(painel)/error.tsx, loading.tsx — tela "Algo deu errado / Tentar de novo"
+  (usa retry() do Next 16.3+) e "Carregando…" na navegação; a do painel mantém a barra lateral.
+  Conferida no navegador com o banco fora do ar.
+- src/components/ui/logo.tsx — loading="eager": sem o preload na barra lateral (FE-02), o Next
+  avisava que o logo era o LCP em telas com pouco conteúdo (pego pelo vigia de console).
+- e2e/estados.spec.ts (novo) — 5 testes: falha ao salvar motorista, falha numa confirmação,
+  falha ao salvar configurações, Sair sem rede e tabela com falha de carga.
+
+Problemas encontrados: ver acima. Rotas inexistentes (not-found.tsx) ficam para o FE-05.
+
+Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx playwright test 43/43.
+
+Pendências: FE-11 registrado (campos só com placeholder em Bancadas e Regiões).
+

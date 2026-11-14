@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { CabecalhoDaTela, Tabela } from '@/components/admin/comum';
+import { CabecalhoDaTela, FALHA_AO_ENVIAR, Tabela, tentar } from '@/components/admin/comum';
 import { Chip } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
@@ -38,28 +38,51 @@ export function Motoristas({
   const [senha, setSenha] = useState<{ para: string; senha: string } | null>(null);
   const [pendente, setPendente] = useState<Pendente>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
 
-  const recarregar = (termo = busca) => buscarMotoristas(termo).then(setLista);
+  async function recarregar(termo = busca) {
+    const r = await tentar(() => buscarMotoristas(termo));
+    if (r) setLista(r);
+    setErro(r ? null : FALHA_AO_ENVIAR);
+  }
 
   // busca com atraso curto; o termo vai por POST, nunca na URL (RF24-CA7)
   useEffect(() => {
-    const id = setTimeout(() => void buscarMotoristas(busca).then(setLista), 300);
+    const id = setTimeout(async () => {
+      const r = await tentar(() => buscarMotoristas(busca));
+      if (r) setLista(r);
+      setErro(r ? null : FALHA_AO_ENVIAR);
+    }, 300);
     return () => clearTimeout(id);
   }, [busca]);
 
   async function confirmar() {
     if (!pendente) return;
     const { tipo, m } = pendente;
-    if (tipo === 'desativar') await alterarAtivoMotorista(m.id, false);
-    if (tipo === 'redefinir') {
-      const r = await redefinirSenhaMotorista(m.id);
-      setSenha({ para: m.nome, senha: r.senhaTemporaria });
-    }
-    if (tipo === 'liberar') {
-      await liberarGeracaoDeSenha(m.id);
-      setAviso(`${m.nome} pode gerar senha sem GPS até o fim do dia.`);
-    }
+    setEnviando(true);
+    setAviso(null);
+    const ok = await tentar(async () => {
+      if (tipo === 'desativar') await alterarAtivoMotorista(m.id, false);
+      if (tipo === 'redefinir') {
+        const r = await redefinirSenhaMotorista(m.id);
+        setSenha({ para: m.nome, senha: r.senhaTemporaria });
+      }
+      if (tipo === 'liberar') {
+        await liberarGeracaoDeSenha(m.id);
+        setAviso(`${m.nome} pode gerar senha sem GPS até o fim do dia.`);
+      }
+      return true;
+    });
+    setEnviando(false);
     setPendente(null);
+    if (!ok) return setErro(FALHA_AO_ENVIAR);
+    await recarregar();
+  }
+
+  async function reativar(m: MotoristaListado) {
+    const ok = await tentar(() => alterarAtivoMotorista(m.id, true));
+    if (ok === null) return setErro(FALHA_AO_ENVIAR);
     await recarregar();
   }
 
@@ -88,6 +111,11 @@ export function Motoristas({
       {aviso ? (
         <p role="status" className="t-body-s mt-base text-success">
           {aviso}
+        </p>
+      ) : null}
+      {erro ? (
+        <p role="alert" className="t-body-s mt-base text-danger">
+          {erro}
         </p>
       ) : null}
 
@@ -145,13 +173,7 @@ export function Motoristas({
                     </button>
                   </>
                 ) : (
-                  <button
-                    className={BOTAO}
-                    onClick={async () => {
-                      await alterarAtivoMotorista(m.id, true);
-                      await recarregar();
-                    }}
-                  >
+                  <button className={BOTAO} onClick={() => void reativar(m)}>
                     Reativar
                   </button>
                 )}
@@ -210,6 +232,7 @@ export function Motoristas({
         confirmar={pendente?.tipo === 'desativar' ? 'Desativar' : 'Confirmar'}
         voltar="Cancelar"
         perigo={pendente?.tipo === 'desativar'}
+        pendente={enviando}
         aoFechar={() => setPendente(null)}
         aoConfirmar={() => void confirmar()}
       />
@@ -238,8 +261,11 @@ function FormMotorista({
   async function enviar(e: FormEvent) {
     e.preventDefault();
     setSalvando(true);
-    const r = await salvarMotorista(motorista?.id ?? null, { nome, cpf, telefone, regiaoId });
+    const r = await tentar(() =>
+      salvarMotorista(motorista?.id ?? null, { nome, cpf, telefone, regiaoId }),
+    );
     setSalvando(false);
+    if (!r) return setErros({ geral: FALHA_AO_ENVIAR });
     if (!r.ok) return setErros(r.erros);
     aoSalvar('senhaTemporaria' in r ? (r.senhaTemporaria as string) : null, nome);
   }
@@ -286,6 +312,11 @@ function FormMotorista({
         </select>
         {erros.regiaoId ? <span className="t-body-s text-danger">{erros.regiaoId}</span> : null}
       </label>
+      {erros.geral ? (
+        <p role="alert" className="t-body-s text-danger">
+          {erros.geral}
+        </p>
+      ) : null}
       <div className="mt-sm flex flex-col gap-md">
         <Button type="submit" disabled={salvando}>
           {salvando ? 'Salvando…' : motorista ? 'Salvar' : 'Cadastrar'}

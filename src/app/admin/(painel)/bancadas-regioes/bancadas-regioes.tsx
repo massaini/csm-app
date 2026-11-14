@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { CabecalhoDaTela } from '@/components/admin/comum';
+import { CabecalhoDaTela, FALHA_AO_ENVIAR, tentar } from '@/components/admin/comum';
 import { Card, Chip } from '@/components/ui/basicos';
 import type { dadosBancadasRegioes, Resultado } from '@/server/cadastros';
 import {
@@ -27,7 +27,11 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
 
   async function rodar(acao: () => Promise<Resultado>) {
     setErro(null);
-    const r = await acao();
+    const r = await tentar(acao);
+    if (!r) {
+      setErro(FALHA_AO_ENVIAR);
+      return false;
+    }
     if (!r.ok) setErro(Object.values(r.erros)[0] ?? 'Não foi possível salvar.');
     return r.ok;
   }
@@ -185,6 +189,7 @@ function EdicaoInline({
 }) {
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(valor);
+  const [enviando, setEnviando] = useState(false);
   if (!editando) {
     return (
       <button
@@ -205,7 +210,10 @@ function EdicaoInline({
       className="flex gap-xs"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (await aoSalvar(texto)) setEditando(false);
+        setEnviando(true);
+        const ok = await aoSalvar(texto);
+        setEnviando(false);
+        if (ok) setEditando(false);
       }}
     >
       <input
@@ -214,8 +222,8 @@ function EdicaoInline({
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
       />
-      <button className={BOTAO} type="submit">
-        Salvar
+      <button className={BOTAO} type="submit" disabled={enviando}>
+        {enviando ? 'Salvando…' : 'Salvar'}
       </button>
       <button className={BOTAO} type="button" onClick={() => setEditando(false)}>
         ×
@@ -232,9 +240,13 @@ function FormUmCampo({
   aoEnviar: (v: string) => Promise<boolean>;
 }) {
   const [v, setV] = useState('');
+  const [enviando, setEnviando] = useState(false);
   async function enviar(e: FormEvent) {
     e.preventDefault();
-    if (await aoEnviar(v)) setV('');
+    setEnviando(true);
+    const ok = await aoEnviar(v);
+    setEnviando(false);
+    if (ok) setV('');
   }
   return (
     <form onSubmit={enviar} className="mt-md flex gap-xs">
@@ -244,7 +256,7 @@ function FormUmCampo({
         value={v}
         onChange={(e) => setV(e.target.value)}
       />
-      <button className={BOTAO} type="submit" disabled={!v.trim()}>
+      <button className={BOTAO} type="submit" disabled={!v.trim() || enviando}>
         Adicionar
       </button>
     </form>
@@ -258,12 +270,16 @@ function NovaRegiao({
 }) {
   const [codigo, setCodigo] = useState('');
   const [nome, setNome] = useState('');
+  const [enviando, setEnviando] = useState(false);
   return (
     <form
       className="mt-md flex gap-xs"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (await aoEnviar(codigo, nome)) {
+        setEnviando(true);
+        const ok = await aoEnviar(codigo, nome);
+        setEnviando(false);
+        if (ok) {
           setCodigo('');
           setNome('');
         }
@@ -281,7 +297,7 @@ function NovaRegiao({
         value={nome}
         onChange={(e) => setNome(e.target.value)}
       />
-      <button className={BOTAO} type="submit" disabled={!codigo.trim() || !nome.trim()}>
+      <button className={BOTAO} type="submit" disabled={!codigo.trim() || !nome.trim() || enviando}>
         Adicionar região
       </button>
     </form>

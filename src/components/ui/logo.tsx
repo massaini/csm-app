@@ -15,6 +15,8 @@ export function Logo({
       width={largura}
       height={largura / 2}
       preload={destaque}
+      // sempre no topo da tela: nunca adiar o carregamento
+      loading="eager"
       className="h-auto"
       style={{ width: largura }}
     />

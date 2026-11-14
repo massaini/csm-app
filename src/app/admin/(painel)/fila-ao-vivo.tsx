@@ -181,6 +181,7 @@ export function FilaAoVivo() {
 
       <Tabela
         carregando={!dados}
+        falhou={erro && !dados}
         vazia="Nenhum motorista na fila agora"
         colunas={[
           { titulo: 'Senha' },

@@ -152,6 +152,7 @@ export function HistoricoAtendimentos({
       ) : null}
       <Tabela
         carregando={!dados}
+        falhou={erro && !dados}
         vazia="Nenhum atendimento no período"
         colunas={[
           { titulo: 'Data / Hora' },
@@ -233,6 +234,7 @@ export function HistoricoSenhas({
       ) : null}
       <Tabela
         carregando={!dados}
+        falhou={erro && !dados}
         vazia="Nenhuma senha no período"
         colunas={[
           { titulo: 'Senha' },

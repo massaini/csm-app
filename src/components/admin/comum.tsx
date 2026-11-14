@@ -71,6 +71,17 @@ export function useConsulta<T>(consulta: Consulta, pollingMs?: number) {
   return { dados, erro, recarregar };
 }
 
+export const FALHA_AO_ENVIAR = 'Não foi possível concluir. Verifique a conexão e tente de novo.';
+
+/** Roda uma server action; falha de rede ou do servidor devolve `null` em vez de travar a tela. */
+export async function tentar<T>(acao: () => Promise<T>): Promise<T | null> {
+  try {
+    return await acao();
+  } catch {
+    return null;
+  }
+}
+
 /** "Agora" no relógio do servidor, atualizado a cada segundo (contagens do painel). */
 export function useAgoraServidor(agoraIso: string | undefined): number | null {
   const desvio = useRef(0);
@@ -154,16 +165,19 @@ export interface Coluna {
   classe?: string;
 }
 
-/** Tabela do painel: cabeçalho elevado e linhas zebradas, com estado vazio. */
+/** Tabela do painel: cabeçalho elevado e linhas zebradas, com estados vazio, carregando e falha. */
 export function Tabela({
   colunas,
   vazia,
   children,
   carregando,
+  falhou = false,
 }: {
   colunas: Coluna[];
   vazia: string;
   carregando: boolean;
+  /** a primeira carga falhou: não há dados para mostrar */
+  falhou?: boolean;
   children: ReactNode[];
 }) {
   return (
@@ -188,7 +202,7 @@ export function Tabela({
                 colSpan={colunas.length}
                 className="t-body-m px-base py-2xl text-center text-text-secondary"
               >
-                {carregando ? 'Carregando…' : vazia}
+                {falhou ? 'Não foi possível carregar.' : carregando ? 'Carregando…' : vazia}
               </td>
             </tr>
           ) : (

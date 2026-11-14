@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { CabecalhoDaTela } from '@/components/admin/comum';
+import { CabecalhoDaTela, FALHA_AO_ENVIAR, tentar } from '@/components/admin/comum';
 import { Card } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -62,7 +62,12 @@ export function Configuracoes({ inicial }: { inicial: Cfg }) {
   async function enviar(e: FormEvent) {
     e.preventDefault();
     setEstado('salvando');
-    const r = await salvarConfiguracoes({ ...valores, raios });
+    const r = await tentar(() => salvarConfiguracoes({ ...valores, raios }));
+    if (!r) {
+      setErros({ geral: FALHA_AO_ENVIAR });
+      setEstado('ocioso');
+      return;
+    }
     if (!r.ok) {
       setErros(r.erros);
       setEstado('ocioso');
@@ -142,6 +147,11 @@ export function Configuracoes({ inicial }: { inicial: Cfg }) {
           {estado === 'salvo' ? (
             <p role="status" className="t-body-s text-success">
               Configurações salvas.
+            </p>
+          ) : null}
+          {erros.geral ? (
+            <p role="alert" className="t-body-s text-danger">
+              {erros.geral}
             </p>
           ) : null}
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { CabecalhoDaTela, Tabela } from '@/components/admin/comum';
+import { CabecalhoDaTela, FALHA_AO_ENVIAR, Tabela, tentar } from '@/components/admin/comum';
 import { Chip } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
@@ -22,17 +22,23 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
     null,
   );
   const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
 
   async function confirmar() {
     if (!pendente) return;
+    const { tipo, a } = pendente;
     setErro(null);
-    if (pendente.tipo === 'desativar') {
-      const r = await alterarAtivoAdmin(pendente.a.id, false);
-      if (!r.ok) setErro(Object.values(r.erros)[0]);
+    setEnviando(true);
+    if (tipo === 'desativar') {
+      const r = await tentar(() => alterarAtivoAdmin(a.id, false));
+      if (!r) setErro(FALHA_AO_ENVIAR);
+      else if (!r.ok) setErro(Object.values(r.erros)[0]);
     } else {
-      const r = await redefinirSenhaAdmin(pendente.a.id);
-      setSenha({ para: pendente.a.nome, senha: r.senhaTemporaria });
+      const r = await tentar(() => redefinirSenhaAdmin(a.id));
+      if (!r) setErro(FALHA_AO_ENVIAR);
+      else setSenha({ para: a.nome, senha: r.senhaTemporaria });
     }
+    setEnviando(false);
     setPendente(null);
   }
 
@@ -151,6 +157,7 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
         confirmar={pendente?.tipo === 'desativar' ? 'Desativar' : 'Confirmar'}
         voltar="Cancelar"
         perigo={pendente?.tipo === 'desativar'}
+        pendente={enviando}
         aoFechar={() => setPendente(null)}
         aoConfirmar={() => void confirmar()}
       />
@@ -172,8 +179,9 @@ function FormAdmin({
   async function enviar(e: FormEvent) {
     e.preventDefault();
     setSalvando(true);
-    const r = await novoAdmin(nome, cpf);
+    const r = await tentar(() => novoAdmin(nome, cpf));
     setSalvando(false);
+    if (!r) return setErros({ geral: FALHA_AO_ENVIAR });
     if (!r.ok) return setErros(r.erros);
     aoCriar(nome, r.senhaTemporaria);
   }
@@ -194,6 +202,11 @@ function FormAdmin({
         onChange={(e) => setCpf(formatarCpf(e.target.value))}
         erro={erros.cpf}
       />
+      {erros.geral ? (
+        <p role="alert" className="t-body-s text-danger">
+          {erros.geral}
+        </p>
+      ) : null}
       <Button type="submit" disabled={salvando}>
         {salvando ? 'Criando…' : 'Criar administrador'}
       </Button>
