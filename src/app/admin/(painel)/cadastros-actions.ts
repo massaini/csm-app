@@ -128,6 +128,14 @@ export async function alterarAtivoAdmin(id: number, ativo: boolean) {
   return r;
 }
 
+export async function renomearAdminAction(id: number, nome: string) {
+  const s = await exigirSuper();
+  const r = await cad.renomearAdmin(deps(), s.id, id, nome);
+  // o nome aparece também na barra lateral e no Conferente
+  revalidatePath('/admin', 'layout');
+  return r;
+}
+
 export async function redefinirSenhaAdmin(id: number) {
   const s = await exigirSuper();
   return cad.redefinirSenhaDoAdmin(deps(), s.id, id);

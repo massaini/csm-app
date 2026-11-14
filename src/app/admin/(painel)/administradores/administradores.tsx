@@ -15,11 +15,17 @@ import { Dialogo, SenhaTemporaria } from '@/components/ui/dialogo';
 import { Field } from '@/components/ui/field';
 import { formatarCpf } from '@/domain/documentos';
 import type { listarAdmins } from '@/server/cadastros';
-import { alterarAtivoAdmin, novoAdmin, redefinirSenhaAdmin } from '../cadastros-actions';
+import {
+  alterarAtivoAdmin,
+  novoAdmin,
+  redefinirSenhaAdmin,
+  renomearAdminAction,
+} from '../cadastros-actions';
 
 type Admin = Awaited<ReturnType<typeof listarAdmins>>[number];
 export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: number }) {
   const [criando, setCriando] = useState(false);
+  const [renomeando, setRenomeando] = useState<Admin | null>(null);
   const [senha, setSenha] = useState<{ para: string; senha: string } | null>(null);
   const [pendente, setPendente] = useState<{ tipo: 'desativar' | 'redefinir'; a: Admin } | null>(
     null,
@@ -87,40 +93,21 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
               {formatarCpf(a.cpf)}
             </td>
             <td className="px-base py-md">
-              {a.papel === 'SUPER_ADMIN' ? (
-                <Chip tom="primary">Super-administrador</Chip>
-              ) : (
-                <Chip tom="neutral">Administrador</Chip>
-              )}
-            </td>
-            <td className="px-base py-md">
-              <div className="flex gap-xs">
-                {a.ativo ? <Chip tom="success">Ativo</Chip> : <Chip tom="neutral">Inativo</Chip>}
-                {a.ativo && a.deveTrocarSenha ? <Chip tom="warning">Troca pendente</Chip> : null}
+              <div className="flex gap-sm">
+                <BotaoDaTabela onClick={() => setRenomeando(a)}>Editar nome</BotaoDaTabela>
+                {a.papel === 'SUPER_ADMIN' ? null : a.ativo ? (
+                  <>
+                    <BotaoDaTabela onClick={() => setPendente({ tipo: 'redefinir', a })}>
+                      Redefinir senha
+                    </BotaoDaTabela>
+                    <BotaoDaTabela perigo onClick={() => setPendente({ tipo: 'desativar', a })}>
+                      Desativar
+                    </BotaoDaTabela>
+                  </>
+                ) : (
+                  <BotaoDaTabela onClick={() => void reativar(a)}>Reativar</BotaoDaTabela>
+                )}
               </div>
-            </td>
-            <td className="px-base py-sm">
-              {a.papel === 'SUPER_ADMIN' ? (
-                <span className="t-body-s text-text-muted">—</span>
-              ) : (
-                <div className="flex gap-xs">
-                  {a.ativo ? (
-                    <>
-                      <BotaoDaTabela onClick={() => setPendente({ tipo: 'redefinir', a })}>
-                        Redefinir senha
-                      </BotaoDaTabela>
-                      <BotaoDaTabela
-                        className="text-danger"
-                        onClick={() => setPendente({ tipo: 'desativar', a })}
-                      >
-                        Desativar
-                      </BotaoDaTabela>
-                    </>
-                  ) : (
-                    <BotaoDaTabela onClick={() => void reativar(a)}>Reativar</BotaoDaTabela>
-                  )}
-                </div>
-              )}
             </td>
           </tr>
         ))}
@@ -134,6 +121,20 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
           }}
           aoCancelar={() => setCriando(false)}
         />
+      </Dialogo>
+
+      <Dialogo
+        aberto={renomeando !== null}
+        titulo="Editar nome"
+        aoFechar={() => setRenomeando(null)}
+      >
+        {renomeando ? (
+          <FormNome
+            admin={renomeando}
+            aoSalvar={() => setRenomeando(null)}
+            aoCancelar={() => setRenomeando(null)}
+          />
+        ) : null}
       </Dialogo>
 
       <Dialogo aberto={senha !== null} titulo="Senha temporária" aoFechar={() => setSenha(null)}>
@@ -206,6 +207,51 @@ function FormAdmin({
       {erros.geral ? <MensagemDeErro>{erros.geral}</MensagemDeErro> : null}
       <Button type="submit" disabled={salvando}>
         {salvando ? 'Criando…' : 'Criar administrador'}
+      </Button>
+      <Button type="button" kind="secondary" onClick={aoCancelar}>
+        Cancelar
+      </Button>
+    </form>
+  );
+}
+
+/** RF27-CA4 — o nome é o que aparece como Conferente para o motorista. */
+function FormNome({
+  admin,
+  aoSalvar,
+  aoCancelar,
+}: {
+  admin: Admin;
+  aoSalvar: () => void;
+  aoCancelar: () => void;
+}) {
+  const [nome, setNome] = useState(admin.nome);
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [salvando, setSalvando] = useState(false);
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    setSalvando(true);
+    const r = await tentar(() => renomearAdminAction(admin.id, nome));
+    setSalvando(false);
+    if (!r) return setErros({ geral: FALHA_AO_ENVIAR });
+    if (!r.ok) return setErros(r.erros);
+    aoSalvar();
+  }
+  return (
+    <form onSubmit={enviar} noValidate className="flex flex-col gap-md">
+      <p className="t-body-s text-text-secondary">
+        É o nome que o motorista vê como Conferente quando este administrador o chama.
+      </p>
+      <Field
+        label="Nome completo"
+        name="nome"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+        erro={erros.nome}
+      />
+      {erros.geral ? <MensagemDeErro>{erros.geral}</MensagemDeErro> : null}
+      <Button type="submit" disabled={salvando}>
+        {salvando ? 'Salvando…' : 'Salvar'}
       </Button>
       <Button type="button" kind="secondary" onClick={aoCancelar}>
         Cancelar

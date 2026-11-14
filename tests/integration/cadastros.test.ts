@@ -17,6 +17,7 @@ import {
   listarMotoristas,
   reativarMotorista,
   redefinirSenhaDoMotorista,
+  renomearAdmin,
   renomearBancada,
   salvarConfiguracoes,
   transferirSuperAdmin,
@@ -337,6 +338,18 @@ describe('administradores', () => {
     expect((await transferirSuperAdmin(deps(), '111.444.777-35')).ok).toBe(true);
     const papeis = await db.admin.findMany({ orderBy: { id: 'asc' }, select: { papel: true } });
     expect(papeis.map((p) => p.papel)).toEqual(['ADMIN', 'SUPER_ADMIN']);
+  });
+
+  it('RF27-CA4: o super-admin edita o nome de um admin, inclusive o próprio, com auditoria', async () => {
+    const s = await db.admin.update({ where: { id: c.admin.id }, data: { papel: 'SUPER_ADMIN' } });
+    expect(await renomearAdmin(deps(), s.id, s.id, '  Marcos Tavares  ')).toEqual({ ok: true });
+    expect((await db.admin.findUniqueOrThrow({ where: { id: s.id } })).nome).toBe('Marcos Tavares');
+    expect(await renomearAdmin(deps(), s.id, s.id, 'ab')).toEqual({
+      ok: false,
+      erros: { nome: 'Informe o nome completo' },
+    });
+    const aud = await db.auditoria.findFirstOrThrow({ where: { acao: 'cadastro.admin.renomear' } });
+    expect(aud.dados).toMatchObject({ para: 'Marcos Tavares' });
   });
 
   it('RF29-CA1: as ações de cadastro ficam na auditoria com o admin que fez', async () => {

@@ -516,6 +516,24 @@ export async function reativarAdmin(deps: AuthDeps, superId: number, id: number)
   await auditar(deps, superId, 'cadastro.admin.reativar', 'ADMIN', id);
 }
 
+/** RF27-CA4 — o super-admin corrige o nome de qualquer admin (é o nome exibido como Conferente). */
+export async function renomearAdmin(
+  deps: AuthDeps,
+  superId: number,
+  id: number,
+  nomeNovo: string,
+): Promise<Resultado> {
+  const nome = nomeNovo.trim();
+  if (nome.length < 3 || nome.length > 100) return falha({ nome: 'Informe o nome completo' });
+  const antes = await deps.db.admin.findUniqueOrThrow({ where: { id } });
+  await deps.db.admin.update({ where: { id }, data: { nome } });
+  await auditar(deps, superId, 'cadastro.admin.renomear', 'ADMIN', id, {
+    de: antes.nome,
+    para: nome,
+  });
+  return { ok: true };
+}
+
 export async function redefinirSenhaDoAdmin(deps: AuthDeps, superId: number | null, id: number) {
   return redefinirSenha(deps, { tipo: 'ADMIN', usuarioId: id, porAdminId: superId });
 }

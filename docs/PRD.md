@@ -463,6 +463,7 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RF27-CA1**: criar (nome + CPF, com senha temporária conforme o RF24-CA1), desativar, reativar e redefinir senha. Desativar e redefinir seguem o RF06-CA1.
 - **RF27-CA2**: um `ADMIN` não vê o menu e recebe 403 nas rotas e ações de administradores.
 - **RF27-CA3**: existe exatamente um `SUPER_ADMIN`, que não pode ser desativado. A transferência é feita pelo comando `npm run admin:transferir-super -- --cpf=<cpf>` (P23). Se o super-admin esquecer a senha ou ficar bloqueado, o comando `npm run admin:redefinir-senha -- --cpf=<cpf>` gera uma senha temporária e zera os bloqueios.
+- **RF27-CA4**: o super-admin edita o nome de qualquer administrador, inclusive o próprio ("Editar nome"), com auditoria. É esse nome que o motorista vê como Conferente (P10).
 
 **RF28 — Virada do dia**
 - **RF28-CA1**: a cada execução do job (9.2), com `inícioDoDia` = início do dia operacional atual:
@@ -661,7 +662,7 @@ Regra: **todo CA tem um teste com o ID no nome** (ex.: `it('RF13-CA2: aceita Est
 | Camada | CAs |
 |---|---|
 | **Unit** (Vitest, `Clock` falso) | Toda a 6.0 (fórmulas, KPIs, arredondamento, dia operacional e quinzena, incluindo 23:30 de São Paulo, código, transições, status efetivo). RF01-CA5 · RF05-CA5 · RF08-CA1 · RF09-CA1, CA2, CA3, CA6 · RF11-CA1 · RF13-CA1, CA7 · RF22-CA3, CA4 · RNF04-CA4 |
-| **Integração** (Vitest + Postgres, `Clock` falso) | RF01-CA2, CA3, CA4 · RF02-CA1, CA2, CA4 · RF03-CA1, CA2 · RF04-CA1, CA2 · RF05-CA2 · RF06-CA1, CA2, CA3 · RF07-CA1, CA2, CA3, CA4 · RF08-CA2, CA3, CA4, CA5 · RF09-CA5, CA7, CA8 · RF10-CA1 a CA7 · RF12-CA2, CA3 · RF13-CA2, CA3, CA5, CA6 · RF15-CA1, CA2 · RF17-CA1, CA2, CA3, CA4, CA6, CA7 · RF18-CA1 a CA6 · RF19-CA1, CA2, CA3 · RF20-CA1, CA2, CA3, CA4, CA6 · RF21-CA1, CA2, CA3, CA5 · RF22-CA2, CA5 · RF24-CA1 a CA7 · RF25-CA1 a CA6 · RF26-CA1, CA2 · RF27-CA1, CA2, CA3 · RF28-CA1, CA2, CA3 · RF29-CA1 · RF30-CA3 · RNF01-CA2 · RNF02-CA1, CA2, CA3, CA4 · RNF06-CA1 |
+| **Integração** (Vitest + Postgres, `Clock` falso) | RF01-CA2, CA3, CA4 · RF02-CA1, CA2, CA4 · RF03-CA1, CA2 · RF04-CA1, CA2 · RF05-CA2 · RF06-CA1, CA2, CA3 · RF07-CA1, CA2, CA3, CA4 · RF08-CA2, CA3, CA4, CA5 · RF09-CA5, CA7, CA8 · RF10-CA1 a CA7 · RF12-CA2, CA3 · RF13-CA2, CA3, CA5, CA6 · RF15-CA1, CA2 · RF17-CA1, CA2, CA3, CA4, CA6, CA7 · RF18-CA1 a CA6 · RF19-CA1, CA2, CA3 · RF20-CA1, CA2, CA3, CA4, CA6 · RF21-CA1, CA2, CA3, CA5 · RF22-CA2, CA5 · RF24-CA1 a CA7 · RF25-CA1 a CA6 · RF26-CA1, CA2 · RF27-CA1, CA2, CA3, CA4 · RF28-CA1, CA2, CA3 · RF29-CA1 · RF30-CA3 · RNF01-CA2 · RNF02-CA1, CA2, CA3, CA4 · RNF06-CA1 |
 | **E2E** (Playwright, 2 contextos, `setGeolocation`) | RF01-CA1, CA6 · RF02-CA3 · RF04-CA3 · RF05-CA1, CA3, CA6 · RF08-CA6 · RF09-CA4 · RF11-CA2, CA3, CA4 · RF12-CA1 · RF13-CA4 · RF14-CA1 a CA6 · RF15-CA3, CA4 · RF16-CA1, CA2 · RF17-CA5, CA8, CA9, CA10 · RF20-CA5 · RF21-CA4 · RF22-CA1 · RF23-CA2, CA3 · RF30-CA1, CA2 · RNF01-CA1 · RNF04-CA1, CA2 |
 | **Carga** (`test:load`) | RNF01-CA3 |
 | **Manual** (`docs/checklist-manual.md`) | RF05-CA4 · RF23-CA1 · RNF01-CA4 · RNF02-CA5 · RNF04-CA3, com push e instalação reais em 1 Android e 1 iPhone |

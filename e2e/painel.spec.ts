@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test';
-import { contextoAdmin, entrarAdmin, fecharContextos, prepararBase, servidor } from './apoio';
+import {
+  CPF,
+  chamarNoPainel,
+  contextoAdmin,
+  contextoMotorista,
+  entrarAdmin,
+  entrarMotorista,
+  fecharContextos,
+  gerarSenhaPelaTela,
+  prepararBase,
+  servidor,
+} from './apoio';
 
 test.afterEach(fecharContextos);
 test.beforeEach(async ({ request }) => {
@@ -76,4 +87,32 @@ test('RNF04-CA2: telas do admin sem rolagem horizontal da página a 1280 px', as
     );
     expect(largo, `rolagem horizontal em ${rota}`).toBe(false);
   }
+});
+
+test('RF27-CA4: o super-admin edita o próprio nome e o motorista o vê como Conferente', async ({
+  browser,
+}) => {
+  const admin = await (await contextoAdmin(browser)).newPage();
+  await entrarAdmin(admin);
+  await admin.goto('/admin/administradores');
+  await admin
+    .getByRole('row')
+    .filter({ hasText: 'Super Admin' })
+    .getByRole('button', { name: 'Editar nome' })
+    .click();
+  const dialogo = admin.getByRole('dialog', { name: 'Editar nome' });
+  await dialogo.getByLabel('Nome completo').fill('Marcos Tavares');
+  await dialogo.getByRole('button', { name: 'Salvar' }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(admin.getByRole('cell', { name: 'Marcos Tavares' })).toBeVisible();
+  await expect(admin.getByRole('complementary').getByText('Marcos Tavares')).toBeVisible();
+
+  const motorista = await (await contextoMotorista(browser)).newPage();
+  await entrarMotorista(motorista, CPF.joao);
+  await expect(motorista).toHaveURL(/\/fila$/);
+  await gerarSenhaPelaTela(motorista);
+  await admin.goto('/admin');
+  await chamarNoPainel(admin, 'A-001');
+  await motorista.getByRole('button', { name: 'Estou a caminho' }).click();
+  await expect(motorista.getByText('Marcos Tavares')).toBeVisible();
 });
