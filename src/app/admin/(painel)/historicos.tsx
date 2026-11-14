@@ -67,7 +67,7 @@ function Filtros({
           </div>
         )}
       </CampoFiltro>
-      <CampoFiltro rotulo="Motorista">
+      <CampoFiltro rotulo="Motorista" busca>
         {(c) => (
           <input
             className={c}
@@ -77,7 +77,7 @@ function Filtros({
           />
         )}
       </CampoFiltro>
-      <CampoFiltro rotulo="Nº da senha">
+      <CampoFiltro rotulo="Nº da senha" busca>
         {(c) => (
           <input
             className={c}
@@ -192,8 +192,8 @@ export function HistoricoAtendimentos({
   );
 }
 
-const CHIP_SENHA: Record<RotuloSenha, 'warning' | 'success' | 'neutral' | 'danger'> = {
-  Aguardando: 'warning',
+const CHIP_SENHA: Record<RotuloSenha, 'primary' | 'success' | 'neutral' | 'danger'> = {
+  Aguardando: 'primary',
   Atendendo: 'success',
   Atendida: 'neutral',
   Cancelada: 'danger',

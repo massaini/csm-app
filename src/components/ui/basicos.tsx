@@ -1,15 +1,17 @@
 import type { ReactNode } from 'react';
 
-type Tom = 'success' | 'warning' | 'primary' | 'neutral' | 'danger' | 'solido';
+type Tom = 'success' | 'warning' | 'primary' | 'neutral' | 'danger' | 'solido' | 'elevado';
 
 const TOM: Record<Tom, string> = {
   success: 'text-success border-success/60 bg-success/15',
-  warning: 'text-primary border-primary/60 bg-primary/15',
+  warning: 'text-warning border-warning/60 bg-warning/15',
   primary: 'text-primary border-primary/60 bg-primary/15',
   neutral: 'text-text-secondary border-border-strong bg-text-muted/15',
   danger: 'text-danger border-danger/60 bg-danger/15',
   /** chamada em andamento: amarelo cheio, para não se confundir com Aguardando */
   solido: 'text-on-primary border-primary bg-primary',
+  /** "Aguardando na fila" sobre o card da senha (`13:2`) */
+  elevado: 'text-primary border-border-strong bg-elevated',
 };
 
 /** `Chip` do Figma: pílula com ponto, texto Overline e fundo do tom a 15%. */
@@ -50,8 +52,8 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
 /** `Info Row` do Figma: rótulo à esquerda, valor em destaque à direita. */
 export function InfoRow({ rotulo, valor }: { rotulo: string; valor: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-base py-sm">
-      <dt className="t-body-m text-text-muted">{rotulo}</dt>
+    <div className="flex items-baseline justify-between gap-base">
+      <dt className="t-body-s text-text-muted">{rotulo}</dt>
       <dd className="t-body-m-strong text-right">{valor}</dd>
     </div>
   );

@@ -103,7 +103,7 @@ export function Motoristas({
       />
 
       <div className="mt-xl max-w-[420px]">
-        <CampoFiltro rotulo="Buscar">
+        <CampoFiltro rotulo="Buscar" busca>
           {(classe) => (
             <input
               className={classe}

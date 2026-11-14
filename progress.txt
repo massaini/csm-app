@@ -177,3 +177,40 @@ Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx 
 
 Pendências: FE-12 registrado (erro de stream intermitente no servidor durante o E2E).
 
+## Iteração 7 — 2026-11-14 — FE-07 · Consistência visual (comparação com o Figma)
+
+Como foi inspecionado: varredura do código por valores fora dos tokens (cores fixas, tamanhos
+de fonte e espaçamentos soltos, larguras); capturas do app pelo Playwright em 390×844 e
+1440×900 comparadas lado a lado com os frames do Figma (`10:2`, `233:440`, `12:2`, `13:2`,
+`144:447`, `18:2`, `19:2`, `19:35`, `19:64`, `170:26`, `171:95`) e com os componentes da página
+`03 · Componentes` (Button `23:22`, Chip `24:15`, Info Row, Filter Field, Sidebar).
+
+Arquivos alterados:
+- components/ui/button.tsx — Secondary com texto branco (estava amarelo; afeta "Voltar",
+  "Cancelar", "Exportar"); desabilitado = a própria variante a 40% (componente `23:22`), exceto
+  o Primary, que segue cinza como o "Gerar senha" bloqueado de `12:2` (RF09-CA2).
+- components/ui/basicos.tsx — Chip Warning passa a laranja (`warning`), como no Figma; antes
+  era um apelido do amarelo. Novo tom `elevado` para "Aguardando na fila" (`13:2`: texto amarelo
+  sobre elevated com borda azul). Info Row com rótulo t-body-s e passo de 34 px (`19:35`).
+- fila-ao-vivo.tsx, historicos.tsx — "Aguardando" usa o tom Primary, como em `170:26`.
+- aguardando.tsx, atendimento.tsx, resultado.tsx — <dl> com gap-md (passo do Info Row).
+- components/admin/sidebar.tsx — ícones de 16 px antes de cada item, como na Sidebar do Figma
+  (5 do Figma + 4 no mesmo traço para os itens novos do MVP).
+- components/admin/comum.tsx — Filter Field "Search" com lupa dentro do campo (Motorista,
+  Nº da senha e a busca de Motoristas).
+- fila/telas/gerar.tsx — botão "Histórico" com borda neutra (era amarela).
+- login/page.tsx — quebra da descrição como em `10:2`.
+- resultado.tsx, notificacoes/ativar.tsx — ícones SVG usam tokens em vez de hex fixo.
+
+Diferenças mantidas (todas no PRD §10.6 ou só dados de exemplo): "Concluir atendimento", sem
+barra de etapas e sem seta em `19:2`; contagem regressiva em `18:2`; filtro de bancada e
+"Confirmar chegada" em `170:26`; "Sair" no histórico e na barra lateral; itens novos da barra
+lateral (o rótulo "Histórico de Atendimentos" quebra em duas linhas; no Figma ele é cortado).
+O fundo do overlay `144:447` no Figma é o fill do frame (limitação da Plugin API registrada no
+CLAUDE.md); o app usa o escurecimento do <dialog>.
+
+Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx playwright test
+46/46 (inclui a auditoria axe de contraste com as cores novas).
+
+Pendências: nenhuma neste item. O erro de stream do FE-12 apareceu de novo durante as capturas.
+

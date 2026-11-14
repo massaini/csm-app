@@ -43,7 +43,7 @@ export function TelaResultado({ estado, fila }: { estado: EstadoDa<'RESULTADO'>;
               height="36"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#050b1f"
+              stroke="var(--color-on-primary)"
               strokeWidth="3"
             >
               <path d="M5 12.5l4.5 4.5L19 7.5" />
@@ -57,7 +57,7 @@ export function TelaResultado({ estado, fila }: { estado: EstadoDa<'RESULTADO'>;
 
         <Card className="mt-3xl w-full text-left">
           <p className="t-overline mb-sm text-text-muted">Resumo do atendimento</p>
-          <dl>
+          <dl className="flex flex-col gap-md">
             <InfoRow rotulo="Senha" valor={senha.codigo} />
             <InfoRow rotulo="Bancada" valor={senha.bancada} />
             <InfoRow rotulo="Rota" valor={senha.rota} />

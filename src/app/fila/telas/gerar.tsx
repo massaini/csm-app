@@ -107,7 +107,7 @@ export function TelaGerar({ estado, fila }: { estado: EstadoDa<'GERAR'>; fila: F
         </div>
         <Link
           href="/historico"
-          className="t-button-m inline-flex min-h-[44px] items-center rounded-full border border-primary/70 px-base text-primary"
+          className="t-button-m inline-flex min-h-[44px] items-center rounded-full border border-border-strong px-base text-primary"
         >
           Histórico
         </Link>

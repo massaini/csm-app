@@ -21,7 +21,9 @@ export default async function PaginaLogin() {
           para continuar
         </h1>
         <p className="t-body-m mt-md text-text-secondary">
-          Informe seu CPF e sua senha para acessar sua fila.
+          Informe seu CPF e sua senha
+          <br />
+          para acessar sua fila.
         </p>
       </header>
       <FormularioLogin acao={entrarMotorista} />

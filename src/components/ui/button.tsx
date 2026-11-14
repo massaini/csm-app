@@ -3,8 +3,9 @@ import type { ButtonHTMLAttributes } from 'react';
 type Kind = 'primary' | 'secondary' | 'danger' | 'reversed';
 
 const ESTILO: Record<Kind, string> = {
-  primary: 'bg-primary text-on-primary',
-  secondary: 'border border-border-strong text-primary bg-transparent',
+  // desabilitado em cinza, como o "Gerar senha" bloqueado de `12:2` (RF09-CA2)
+  primary: 'bg-primary text-on-primary disabled:bg-text-muted/60',
+  secondary: 'border border-border-strong text-text-primary bg-transparent',
   danger: 'border border-danger text-danger bg-transparent',
   reversed: 'bg-on-primary text-primary',
 };
@@ -24,7 +25,9 @@ export function Button({ kind = 'primary', bloco = true, className = '', ...prop
         't-button-l h-[54px] rounded-md px-base transition-opacity',
         bloco ? 'w-full' : '',
         ESTILO[kind],
-        'disabled:cursor-not-allowed disabled:bg-text-muted/60 disabled:text-on-primary disabled:border-transparent',
+        kind === 'primary'
+          ? 'disabled:cursor-not-allowed'
+          : 'disabled:cursor-not-allowed disabled:opacity-40',
         className,
       ].join(' ')}
     />

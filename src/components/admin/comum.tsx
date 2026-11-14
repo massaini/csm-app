@@ -150,17 +150,40 @@ export function Kpi({
 const CAMPO =
   't-body-s h-[44px] w-full rounded-md border border-border bg-surface px-md text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none';
 
+/** `Filter Field` do Figma (Search / Date / Select); `busca` põe a lupa dentro do campo. */
 export function CampoFiltro({
   rotulo,
+  busca = false,
   children,
 }: {
   rotulo: string;
+  busca?: boolean;
   children: (classe: string) => ReactNode;
 }) {
   return (
     <label className="flex min-w-0 flex-1 flex-col gap-xs">
       <span className="t-overline text-text-muted">{rotulo}</span>
-      {children(CAMPO)}
+      {busca ? (
+        <span className="relative">
+          <svg
+            aria-hidden
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            className="pointer-events-none absolute left-md top-1/2 -translate-y-1/2 text-text-muted"
+          >
+            <circle cx="7" cy="7" r="4.5" />
+            <path d="m10.5 10.5 3 3" />
+          </svg>
+          {children(`${CAMPO} pl-[36px]`)}
+        </span>
+      ) : (
+        children(CAMPO)
+      )}
     </label>
   );
 }

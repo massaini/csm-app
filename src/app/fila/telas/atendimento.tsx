@@ -60,7 +60,7 @@ export function TelaAtendimento({
       </Card>
 
       <Card>
-        <dl>
+        <dl className="flex flex-col gap-md">
           <InfoRow rotulo="Senha" valor={senha.codigo} />
           <InfoRow rotulo="Início" valor={horaMinuto(estado.chamadaEm)} />
           <InfoRow rotulo="Placa" valor={senha.placa} />

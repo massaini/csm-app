@@ -43,7 +43,7 @@ function mmss(ms: number) {
 }
 
 const CHIP = {
-  AGUARDANDO: { tom: 'warning', texto: 'Aguardando' },
+  AGUARDANDO: { tom: 'primary', texto: 'Aguardando' },
   CHAMADA: { tom: 'solido', texto: 'Chamado' },
   EM_ATENDIMENTO: { tom: 'success', texto: 'Em atendimento' },
 } as const;
@@ -116,7 +116,7 @@ export function FilaAoVivo() {
       </LinhaDeKpis>
 
       <BarraDeFiltros>
-        <CampoFiltro rotulo="Motorista">
+        <CampoFiltro rotulo="Motorista" busca>
           {(c) => (
             <input
               className={c}
@@ -126,7 +126,7 @@ export function FilaAoVivo() {
             />
           )}
         </CampoFiltro>
-        <CampoFiltro rotulo="Nº da senha">
+        <CampoFiltro rotulo="Nº da senha" busca>
           {(c) => (
             <input
               className={c}

@@ -26,7 +26,7 @@ export function TelaAguardando({ estado, fila }: { estado: EstadoDa<'AGUARDANDO'
       <Logo largura={80} />
 
       <Card className="flex flex-col items-center text-center">
-        <Chip tom="warning">Aguardando na fila</Chip>
+        <Chip tom="elevado">Aguardando na fila</Chip>
         <p className="t-overline mt-md text-text-muted">Sua senha</p>
         <p className="t-display-l text-primary">{senha.codigo}</p>
         <p className="t-body-m mt-xs text-text-secondary">{estado.textoProximidade}</p>
@@ -50,7 +50,7 @@ export function TelaAguardando({ estado, fila }: { estado: EstadoDa<'AGUARDANDO'
 
       <Card>
         <p className="t-overline mb-sm text-text-muted">Dados do carregamento</p>
-        <dl>
+        <dl className="flex flex-col gap-md">
           <InfoRow rotulo="Motorista" valor={senha.motoristaNome} />
           <InfoRow rotulo="Placa" valor={senha.placa} />
           <InfoRow rotulo="Galpão" valor={senha.galpaoNome} />
