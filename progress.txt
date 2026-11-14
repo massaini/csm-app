@@ -299,3 +299,32 @@ Verificações: npm test 181 ok, npm run lint ok, tsc ok, npm run build ok, aces
 
 Pendências: nenhuma neste item.
 
+## Iteração 12 — 2026-11-14 — FE-12 · Erro de stream no servidor (investigação)
+
+Sintoma: em algumas rodadas do E2E o `next dev` registrou "⨯ Error: The destination stream
+errored while writing data" (1 a 2 vezes por rodada; nas do FE-06, no RF05-CA1, que recarrega a
+página logo após "Agora não", e durante as capturas do FE-07, ao fechar contextos).
+
+Investigação:
+- Origem no código: a mensagem existe só no runtime do React DOM embutido no Next
+  (node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.*.js), em
+  `destination.on("error", createCancelHandler(request, "The destination stream errored while
+  writing data."))`. Ela é o motivo do cancelamento do render quando o socket da resposta HTTP dá
+  erro (conexão do navegador resetada no meio do envio). O irmão "closed early" é o fechamento
+  limpo. Nenhum código do app produz essa mensagem; ela não indica exceção nas telas nem nas
+  queries.
+- Tentativa de reprodução (spec temporário, removido): 60 cortes forçados em três padrões
+  (navegar e recarregar no meio do carregamento; fechar o contexto durante o render; fechar
+  durante os prefetch do <Link>). Nenhuma ocorrência — fechar a conexão de forma limpa cai no
+  caso "closed early", que o Next não registra. O app respondeu normalmente depois de todos os
+  cortes. O reset de socket depende do momento exato em que o Chromium derruba a conexão, por
+  isso é intermitente.
+
+Conclusão: é o render cancelado porque o cliente foi embora, sem nada a tratar no app. Em
+produção pode aparecer no log do Railway quando um motorista fecha o app no meio de um
+carregamento; não afeta a resposta de ninguém.
+
+Arquivos alterados: nenhum de código.
+
+Pendências: nenhuma.
+
