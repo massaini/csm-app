@@ -57,6 +57,7 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
                   <EdicaoInline
                     valor={b.identificacao}
                     prefixo="Bancada "
+                    rotulo={`bancada ${b.identificacao} do galpão ${g.nome}`}
                     aoSalvar={(v) => rodar(() => renomearBancada(b.id, v))}
                   />
                   <span className="flex items-center gap-xs">
@@ -72,6 +73,7 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
             </ul>
             <FormUmCampo
               placeholder="Nova bancada (ex.: 09)"
+              rotulo={`Nova bancada no galpão ${g.nome}`}
               aoEnviar={(v) => rodar(() => novaBancada(g.id, v))}
             />
           </Card>
@@ -87,6 +89,7 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
                 <span className="t-body-m-strong w-[48px] text-primary">{r.codigo}</span>
                 <EdicaoInline
                   valor={r.nome}
+                  rotulo={`região ${r.codigo}`}
                   aoSalvar={(v) => rodar(() => renomearRegiao(r.id, v))}
                 />
               </span>
@@ -170,10 +173,13 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
 function EdicaoInline({
   valor,
   prefixo = '',
+  rotulo,
   aoSalvar,
 }: {
   valor: string;
   prefixo?: string;
+  /** o que está sendo renomeado, para o nome acessível ("bancada 07 do galpão F SDR") */
+  rotulo: string;
   aoSalvar: (v: string) => Promise<boolean>;
 }) {
   const [editando, setEditando] = useState(false);
@@ -184,6 +190,7 @@ function EdicaoInline({
       <button
         className="t-body-m text-left hover:underline"
         title="Clique para renomear"
+        aria-label={`Renomear ${prefixo}${valor}`}
         onClick={() => {
           setTexto(valor);
           setEditando(true);
@@ -207,6 +214,7 @@ function EdicaoInline({
     >
       <input
         autoFocus
+        aria-label={`Novo nome da ${rotulo}`}
         className={`${CAMPO} w-[160px]`}
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
@@ -223,9 +231,11 @@ function EdicaoInline({
 
 function FormUmCampo({
   placeholder,
+  rotulo,
   aoEnviar,
 }: {
   placeholder: string;
+  rotulo: string;
   aoEnviar: (v: string) => Promise<boolean>;
 }) {
   const [v, setV] = useState('');
@@ -241,6 +251,7 @@ function FormUmCampo({
     <form onSubmit={enviar} className="mt-md flex gap-xs">
       <input
         className={`${CAMPO} min-w-0 flex-1`}
+        aria-label={rotulo}
         placeholder={placeholder}
         value={v}
         onChange={(e) => setV(e.target.value)}
@@ -276,12 +287,14 @@ function NovaRegiao({
     >
       <input
         className={`${CAMPO} w-[120px]`}
+        aria-label="Código da nova região"
         placeholder="Código (500)"
         value={codigo}
         onChange={(e) => setCodigo(e.target.value)}
       />
       <input
         className={`${CAMPO} min-w-0 flex-1`}
+        aria-label="Nome da nova região"
         placeholder="Nome (Centro de Santo André)"
         value={nome}
         onChange={(e) => setNome(e.target.value)}

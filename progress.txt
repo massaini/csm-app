@@ -280,3 +280,22 @@ tsc e build ok.
 
 Pendências: nenhuma neste item.
 
+## Iteração 11 — 2026-11-14 — FE-11 · Campos só com placeholder (Bancadas e Regiões)
+
+Problema (achado no FE-04): os campos de adicionar bancada e região só tinham placeholder, que
+some ao digitar. Ao inspecionar, apareceu algo pior: o campo de renomear (modo de edição) não
+tinha nome nenhum, e a auditoria do FE-03 não o via porque nunca abria a edição. O botão de
+renomear também não dizia a ação ao leitor de tela.
+
+Arquivos alterados:
+- src/app/admin/(painel)/bancadas-regioes/bancadas-regioes.tsx — nome acessível em todos os
+  campos: "Nova bancada no galpão F SDR" (um formulário por galpão), "Código da nova região",
+  "Nome da nova região", "Novo nome da bancada 07 do galpão F SDR" / "Novo nome da região 500";
+  o botão vira "Renomear Bancada 07" (contém o texto visível). Placeholders mantidos como exemplo.
+- e2e/acessibilidade.spec.ts — teste novo: encontra os campos pelos rótulos, audita a tela com
+  a edição aberta e renomeia uma bancada só pelo teclado.
+
+Verificações: npm test 181 ok, npm run lint ok, tsc ok, npm run build ok, acessibilidade 6/6.
+
+Pendências: nenhuma neste item.
+

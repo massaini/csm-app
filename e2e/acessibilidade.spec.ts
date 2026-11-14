@@ -191,3 +191,22 @@ test('FE-03: no painel, Esc fecha o diálogo e o foco volta ao botão que o abri
   await expect(dialogo).toBeHidden();
   await expect(novo).toBeFocused();
 });
+
+test('FE-11: os campos de Bancadas e Regiões têm nome acessível, inclusive na edição', async ({
+  browser,
+}) => {
+  const admin = await (await contextoAdmin(browser)).newPage();
+  await entrarAdmin(admin);
+  await admin.goto('/admin/bancadas-regioes');
+  await expect(admin.getByLabel('Nova bancada no galpão F SDR')).toBeVisible();
+  await expect(admin.getByLabel('Código da nova região')).toBeVisible();
+  await expect(admin.getByLabel('Nome da nova região')).toBeVisible();
+
+  await admin.getByRole('button', { name: 'Renomear Bancada 08' }).click();
+  const campo = admin.getByLabel('Novo nome da bancada 08 do galpão F SDR');
+  await expect(campo).toBeFocused();
+  await auditar(admin, '/admin/bancadas-regioes (renomeando)');
+  await campo.fill('09');
+  await admin.keyboard.press('Enter');
+  await expect(admin.getByRole('button', { name: 'Renomear Bancada 09' })).toBeVisible();
+});
