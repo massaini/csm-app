@@ -36,7 +36,7 @@ export function AtivarNotificacoes({ chavePublica }: { chavePublica: string }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-xl pb-xl pt-3xl text-center">
       <header className="flex flex-col items-center">
-        <Logo />
+        <Logo destaque />
         <div
           aria-hidden
           className="mt-2xl flex h-[96px] w-[96px] items-center justify-center rounded-full bg-primary/15"

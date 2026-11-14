@@ -837,7 +837,7 @@ arquivos correspondentes, corrigir o que foi achado e ver `npm test`, `npm run l
 Ordem = prioridade.
 
 - [x] **FE-01 · (d) Telefone sem formatação** — o campo do cadastro de motoristas não aplica máscara e a tabela mostra só dígitos (relatado no ensaio local).
-- [ ] **FE-02 · (f) Erros e warnings** no console do navegador (todas as telas) e no build.
+- [x] **FE-02 · (f) Erros e warnings** no console do navegador (todas as telas) e no build.
 - [ ] **FE-03 · (b) Acessibilidade** — semântica HTML, labels, alt text, contraste, navegação por teclado, foco visível.
 - [ ] **FE-04 · (c) Estados de UI** — loading, erro, vazio e sucesso em cada tela e ação.
 - [ ] **FE-05 · (g) Textos, links e rotas** — textos (ortografia, padrão pt-BR), links quebrados e rotas inexistentes.

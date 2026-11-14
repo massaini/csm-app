@@ -6,6 +6,7 @@ import {
   entrarAdmin,
   entrarMotorista,
   fecharContextos,
+  permitirNoConsole,
   prepararBase,
   servidor,
 } from './apoio';
@@ -46,7 +47,8 @@ test('RF02-CA1 / RF02-CA3: com troca pendente, qualquer rota vai para a troca; d
   await expect(page).toHaveURL(/\/fila$/);
 });
 
-test('RF01-CA6: o link dos termos de uso abre /termos', async ({ page }) => {
+test('RF01-CA6: o link dos termos de uso abre /termos', async ({ browser }) => {
+  const page = await (await contextoMotorista(browser)).newPage();
   await page.goto('/login');
   await page.getByRole('link', { name: 'termos de uso da CSM' }).click();
   await expect(page).toHaveURL(/\/termos$/);
@@ -54,8 +56,9 @@ test('RF01-CA6: o link dos termos de uso abre /termos', async ({ page }) => {
 });
 
 test('RF23-CA2 / RF23-CA3: /instalar é pública, tem link no login e passo a passo para Android e iPhone', async ({
-  page,
+  browser,
 }) => {
+  const page = await (await contextoMotorista(browser)).newPage();
   await page.goto('/login');
   await page.getByRole('link', { name: 'Como instalar o app' }).click();
   await expect(page).toHaveURL(/\/instalar$/);
@@ -76,6 +79,8 @@ test('RF04-CA3: o motorista sai pelo histórico e o admin pela barra lateral', a
   await motorista.goto('/fila');
   await expect(motorista).toHaveURL(/\/login$/);
 
+  // a Fila ao Vivo ainda está carregando quando a sessão acaba: a consulta em voo volta 401
+  permitirNoConsole(/status of 401/);
   const admin = await (await contextoAdmin(browser)).newPage();
   await entrarAdmin(admin);
   await admin.getByRole('button', { name: 'Sair' }).click();

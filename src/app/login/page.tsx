@@ -13,7 +13,7 @@ export default async function PaginaLogin() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-xl pb-xl pt-3xl">
       <header className="flex flex-col items-center text-center">
-        <Logo />
+        <Logo destaque />
         <p className="t-overline mt-xl text-primary">Bem-vindo</p>
         <h1 className="t-title-l mt-md">
           Identifique-se

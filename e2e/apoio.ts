@@ -129,10 +129,35 @@ export async function servidor(
 }
 
 const abertos: BrowserContext[] = [];
+const doConsole: string[] = [];
+let permitidos: RegExp[] = [];
 
-/** Fecha os contextos do teste, para nenhum polling vazar para o próximo. */
+/** Erros e avisos do navegador (console e exceções não tratadas) em qualquer página do teste. */
+function vigiarConsole(ctx: BrowserContext) {
+  ctx.on('page', (p) => {
+    p.on('console', (m) => {
+      if (m.type() === 'error' || m.type() === 'warning') {
+        doConsole.push(`[${m.type()}] ${p.url()} — ${m.text()}`);
+      }
+    });
+    p.on('pageerror', (e) => doConsole.push(`[pageerror] ${p.url()} — ${e.message}`));
+  });
+}
+
+/** Mensagens de console que o teste provoca de propósito (ex.: requisições sem rede). */
+export function permitirNoConsole(...padroes: RegExp[]) {
+  permitidos.push(...padroes);
+}
+
+/**
+ * Fecha os contextos do teste, para nenhum polling vazar para o próximo, e falha se o
+ * navegador registrou erro ou aviso que o teste não declarou com `permitirNoConsole`.
+ */
 export async function fecharContextos() {
   await Promise.all(abertos.splice(0).map((c) => c.close().catch(() => {})));
+  const achados = doConsole.splice(0).filter((m) => !permitidos.some((re) => re.test(m)));
+  permitidos = [];
+  expect(achados, 'erros/avisos no console do navegador').toEqual([]);
 }
 
 /** Contexto de celular no pátio, com GPS liberado e (por padrão) sem a pergunta de notificações. */
@@ -149,8 +174,14 @@ export async function contextoMotorista(
     ...(opcoes.semGps ? {} : { geolocation: PATIO, permissions: ['geolocation'] }),
   });
   abertos.push(ctx);
+  vigiarConsole(ctx);
   if (!opcoes.perguntarNotificacoes) {
-    await ctx.addInitScript((flag) => localStorage.setItem(flag, '1'), FLAG_AGORA_NAO);
+    await ctx.addInitScript((flag) => {
+      // o script também roda em about:blank, onde o localStorage não existe
+      try {
+        localStorage.setItem(flag, '1');
+      } catch {}
+    }, FLAG_AGORA_NAO);
   }
   return ctx;
 }
@@ -162,6 +193,7 @@ export async function contextoAdmin(browser: Browser, largura = 1440) {
     timezoneId: 'America/Sao_Paulo',
   });
   abertos.push(ctx);
+  vigiarConsole(ctx);
   return ctx;
 }
 

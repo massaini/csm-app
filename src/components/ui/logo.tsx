@@ -1,13 +1,20 @@
 import Image from 'next/image';
 
-export function Logo({ largura = 160 }: { largura?: number }) {
+/** `destaque`: o logo é o maior elemento da tela (login, troca de senha), então é pré-carregado. */
+export function Logo({
+  largura = 160,
+  destaque = false,
+}: {
+  largura?: number;
+  destaque?: boolean;
+}) {
   return (
     <Image
       src="/logo-csm.png"
       alt="CSM — Conectando Soluções em Movimento"
       width={largura}
       height={largura / 2}
-      priority
+      preload={destaque}
       className="h-auto"
       style={{ width: largura }}
     />

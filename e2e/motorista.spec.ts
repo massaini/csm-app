@@ -5,6 +5,7 @@ import {
   entrarMotorista,
   fecharContextos,
   gerarSenhaPelaTela,
+  permitirNoConsole,
   prepararBase,
   servidor,
 } from './apoio';
@@ -87,6 +88,7 @@ test('RF15-CA3 / RF15-CA4: histórico vazio com cards zerados e sem "Exportar"',
 test('RF30-CA1 / RF30-CA2: sem rede, a ação mostra "Enviando…", repete 3 vezes e exibe o banner', async ({
   browser,
 }) => {
+  permitirNoConsole(/net::ERR_INTERNET_DISCONNECTED/);
   const ctx = await contextoMotorista(browser);
   const page = await ctx.newPage();
   await naFila(page);

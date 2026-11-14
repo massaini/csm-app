@@ -10,7 +10,7 @@ export default async function PaginaTrocarSenhaAdmin() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[420px] flex-col px-xl pb-xl pt-3xl">
       <header className="flex flex-col items-center text-center">
-        <Logo />
+        <Logo destaque />
         <h1 className="t-title-l mt-xl">Crie sua nova senha</h1>
         <p className="t-body-m mt-md text-text-secondary">
           Por segurança, troque a senha temporária por uma só sua (mínimo de 8 caracteres).

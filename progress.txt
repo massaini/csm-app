@@ -19,3 +19,32 @@ Problemas encontrados:
 Verificações: npm test (177 testes) ok · npm run lint ok · npm run build ok.
 
 Pendências: nenhuma neste item.
+
+## Iteração 2 — 2026-11-14 — FE-02 · Erros e warnings (console e build)
+
+Como foi inspecionado: os contextos de navegador do E2E (motorista e admin) passaram a registrar
+console error/warning e exceções não tratadas; a suíte inteira (33 testes, todas as telas do
+motorista e do painel) rodou com a coleta ligada. Build de produção, lint e a saída do `next dev`
+(stdout/stderr do servidor durante o E2E) também foram conferidos.
+
+Arquivos alterados:
+- e2e/apoio.ts — vigia de console permanente: `fecharContextos` falha o teste se houver erro ou
+  aviso no navegador não declarado com `permitirNoConsole(regex)`; o init script do "Agora não"
+  deixou de lançar exceção em about:blank (localStorage indisponível).
+- e2e/acesso.spec.ts — /termos e /instalar passam a usar o contexto vigiado; o logout do admin
+  declara o 401 esperado (consulta em voo quando a sessão acaba).
+- e2e/motorista.spec.ts — o teste sem rede declara net::ERR_INTERNET_DISCONNECTED.
+- e2e/fluxo.spec.ts — RF17-CA10: a regex do dia da semana não agrupava a alternância e esperava
+  "sábado" minúsculo; falhava aos sábados e domingos.
+- src/components/ui/logo.tsx + 5 telas — `priority` (depreciado no Next 16) trocado por `preload`,
+  e só nas telas em que o logo é o destaque (logins, trocas de senha, notificações). Na barra
+  lateral do painel o preload gerava o aviso "preloaded but not used".
+
+Problemas encontrados: exceção em about:blank vinda do script de teste (25×); aviso de preload do
+logo no painel; teste RF17-CA10 quebrado em fim de semana. Esperados e mantidos: 401 da consulta em
+voo no logout do admin e ERR_INTERNET_DISCONNECTED no teste offline. Build sem avisos.
+
+Verificações: npm test ok, npm run lint ok, npm run build ok, tsc ok, npx playwright test 33/33.
+
+Pendências: nenhuma neste item.
+

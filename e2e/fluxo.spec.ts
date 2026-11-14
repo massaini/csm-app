@@ -165,7 +165,9 @@ test('RF17-CA10: o subtítulo da Fila ao Vivo mostra data por extenso e hora', a
   browser,
 }) => {
   const admin = await painel(browser);
-  await expect(admin.getByText(/^Estado em tempo real · \S+-feira|sábado|domingo/)).toBeVisible();
+  await expect(
+    admin.getByText(/^Estado em tempo real · (\S+-feira|Sábado|Domingo), /),
+  ).toBeVisible();
   await expect(admin.getByText(/Estado em tempo real · .+ de \d{4} — \d{2}:\d{2}$/)).toBeVisible();
 });
 
