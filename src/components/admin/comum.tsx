@@ -71,7 +71,8 @@ export function useConsulta<T>(consulta: Consulta, pollingMs?: number) {
   return { dados, erro, recarregar };
 }
 
-export const FALHA_AO_ENVIAR = 'Não foi possível concluir. Verifique a conexão e tente de novo.';
+export const FALHA_AO_ENVIAR =
+  'Não foi possível concluir. Verifique sua internet e tente novamente.';
 
 /** Roda uma server action; falha de rede ou do servidor devolve `null` em vez de travar a tela. */
 export async function tentar<T>(acao: () => Promise<T>): Promise<T | null> {

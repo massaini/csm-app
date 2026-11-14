@@ -11,7 +11,7 @@ import {
   servidor,
 } from './apoio';
 
-const FALHA = 'Não foi possível concluir. Verifique a conexão e tente de novo.';
+const FALHA = 'Não foi possível concluir. Verifique sua internet e tente novamente.';
 
 /** Derruba as server actions (POST na própria página) para simular rede ou servidor fora. */
 async function derrubarAcoes(page: Page) {
@@ -93,7 +93,7 @@ test('FE-04: sem resposta do servidor, a Fila ao Vivo avisa em vez de ficar "Car
   await entrarAdmin(admin);
   await admin.route('**/api/admin/consulta', (rota) => rota.abort('failed'));
   await admin.reload();
-  await expect(admin.getByText('Sem conexão com o servidor. Tentando de novo…')).toBeVisible();
+  await expect(admin.getByText('Sem conexão com o servidor. Tentando novamente…')).toBeVisible();
   await expect(admin.getByText('Não foi possível carregar.')).toBeVisible();
   await expect(admin.getByText('Carregando…')).toHaveCount(0);
 });

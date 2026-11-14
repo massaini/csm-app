@@ -30,7 +30,7 @@ export function SairMotorista() {
     <>
       {falhou ? (
         <p role="alert" className="t-body-s text-danger">
-          Não foi possível sair. Verifique sua internet e tente de novo.
+          Não foi possível sair. Verifique sua internet e tente novamente.
         </p>
       ) : null}
       <button

@@ -82,9 +82,9 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
             </td>
             <td className="px-base py-md">
               {a.papel === 'SUPER_ADMIN' ? (
-                <Chip tom="primary">Super-admin</Chip>
+                <Chip tom="primary">Super-administrador</Chip>
               ) : (
-                <Chip tom="neutral">Admin</Chip>
+                <Chip tom="neutral">Administrador</Chip>
               )}
             </td>
             <td className="px-base py-md">

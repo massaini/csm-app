@@ -117,3 +117,34 @@ Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx 
 
 Pendências: FE-11 registrado (campos só com placeholder em Bancadas e Regiões).
 
+## Iteração 5 — 2026-11-14 — FE-05 · Textos, links e rotas
+
+Como foi inspecionado: todas as rotas (page.tsx/route.ts) cruzadas com todo destino de navegação
+do código (href, redirect, router.replace/push, manifest, service worker, push e ícones de
+public/); parâmetros ?aba= e ?entrou=1; resposta de rotas inexistentes; leitura de ~300 textos
+visíveis extraídos do código (JSX, props de texto, metadados e mensagens do servidor),
+comparados com o PRD (§10.5 e CAs). Sem links externos.
+
+Arquivos alterados:
+- src/app/not-found.tsx + src/app/voltar-ao-inicio.tsx (novos) — rota inexistente mostrava a
+  página padrão do Next em inglês ("404: This page could not be found."). Agora "Página não
+  encontrada", com "Voltar ao painel" para quem estava em /admin e "Voltar ao início" para os
+  demais.
+- Padrão "tente novamente" do PRD (RF30, §10.5): textos criados no FE-04 diziam "tente de novo"
+  e a Fila ao Vivo tinha uma terceira variação ("Sem conexão. Tente novamente."). Alinhados:
+  components/admin/comum.tsx, components/ui/estados.tsx ("Tentar novamente"),
+  historico/sair.tsx, fila/actions.ts, fila-ao-vivo.tsx (usa FALHA_AO_ENVIAR e "Tentando
+  novamente…").
+- administradores.tsx — chips "Super-admin"/"Admin" passam a "Super-administrador"/
+  "Administrador", como na barra lateral e no PRD.
+- e2e/rotas.spec.ts (novo) — coleta os links das telas do motorista e do painel e confere que
+  todos respondem; 404 em pt-BR com o link de volta certo. e2e/estados.spec.ts com os textos
+  novos.
+
+Mantidos de propósito: os chips de geofence com hífen ("Dentro do pátio - gerar senha
+disponível") são o texto exato do PRD (RF09-CA1/CA2, §10.5).
+
+Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx playwright test 46/46.
+
+Pendências: nenhuma neste item.
+

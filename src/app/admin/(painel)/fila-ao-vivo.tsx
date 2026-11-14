@@ -6,6 +6,7 @@ import {
   BotaoExportar,
   CabecalhoDaTela,
   CampoFiltro,
+  FALHA_AO_ENVIAR,
   Kpi,
   LinhaDeKpis,
   Tabela,
@@ -79,7 +80,7 @@ export function FilaAoVivo() {
       const r = await acao();
       if (!r.ok && r.aviso) setAviso(r.aviso);
     } catch {
-      setAviso('Sem conexão. Tente novamente.');
+      setAviso(FALHA_AO_ENVIAR);
     } finally {
       setEnviando(false);
       setPendente(null);
@@ -175,7 +176,7 @@ export function FilaAoVivo() {
 
       {aviso || erro ? (
         <p role="alert" className="t-body-s mt-base text-danger">
-          {aviso ?? 'Sem conexão com o servidor. Tentando de novo…'}
+          {aviso ?? 'Sem conexão com o servidor. Tentando novamente…'}
         </p>
       ) : null}
 

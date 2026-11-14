@@ -8,10 +8,10 @@ export function TelaDeErro({ aoTentarDeNovo }: { aoTentarDeNovo: () => void }) {
     <main className="mx-auto flex min-h-[60dvh] w-full max-w-[430px] flex-col items-center justify-center gap-base px-xl text-center">
       <h1 className="t-title-l">Algo deu errado</h1>
       <p className="t-body-m text-text-secondary">
-        Não foi possível carregar esta tela. Verifique sua internet e tente de novo.
+        Não foi possível carregar esta tela. Verifique sua internet e tente novamente.
       </p>
       <Button className="mt-base" onClick={aoTentarDeNovo}>
-        Tentar de novo
+        Tentar novamente
       </Button>
     </main>
   );

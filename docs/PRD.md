@@ -840,7 +840,7 @@ Ordem = prioridade.
 - [x] **FE-02 · (f) Erros e warnings** no console do navegador (todas as telas) e no build.
 - [x] **FE-03 · (b) Acessibilidade** — semântica HTML, labels, alt text, contraste, navegação por teclado, foco visível.
 - [x] **FE-04 · (c) Estados de UI** — loading, erro, vazio e sucesso em cada tela e ação.
-- [ ] **FE-05 · (g) Textos, links e rotas** — textos (ortografia, padrão pt-BR), links quebrados e rotas inexistentes.
+- [x] **FE-05 · (g) Textos, links e rotas** — textos (ortografia, padrão pt-BR), links quebrados e rotas inexistentes.
 - [ ] **FE-06 · (a) Estrutura de componentes e páginas** — duplicação, componentes órfãos, props não utilizadas.
 - [ ] **FE-07 · (d) Consistência visual** — espaçamentos, tipografia, cores e componentes repetidos, comparando com o Figma.
 - [ ] **FE-08 · (e) Performance básica** — tamanho de imagens e bundle, re-renders desnecessários, imports pesados.

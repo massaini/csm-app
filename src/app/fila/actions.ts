@@ -29,7 +29,7 @@ const MENSAGENS: Partial<Record<CodigoResultado, string>> = {
   FORA_DO_RAIO: 'Você está fora do pátio. Aproxime-se ou peça liberação ao administrador.',
   SEM_BANCADA: 'Sua região não é atendida neste galpão. Fale com o administrador.',
   PLACA_INVALIDA: 'Placa inválida. Use o formato ABC-1234 ou ABC-1D23.',
-  NAO_ENCONTRADO: 'Não foi possível concluir. Atualize a tela e tente de novo.',
+  NAO_ENCONTRADO: 'Não foi possível concluir. Atualize a tela e tente novamente.',
 };
 
 async function responder(motoristaId: number, codigo: CodigoResultado): Promise<RespostaDaAcao> {
