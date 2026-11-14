@@ -148,3 +148,32 @@ Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx 
 
 Pendências: nenhuma neste item.
 
+## Iteração 6 — 2026-11-14 — FE-06 · Estrutura de componentes e páginas
+
+Como foi inspecionado: script local que lista todo export de src/ e conta os usos fora do
+próprio arquivo (o `npx knip` foi bloqueado pela política de permissões); busca por
+constantes e trechos JSX repetidos; uso de cada prop opcional dos componentes compartilhados;
+comparação das páginas de login e troca de senha do motorista e do admin. Nenhum componente ou
+página órfã. Exports sem uso fora do arquivo são tipos do back-end; `tempoAteIniciarMin`
+(domínio) só aparece em teste — fora do escopo de front end.
+
+Arquivos alterados:
+- components/ui/basicos.tsx — `MensagemDeErro`: o mesmo <p role="alert" t-body-s text-danger>
+  estava copiado 14 vezes em 12 arquivos (formulários de acesso, painel, Gerar, Sair,
+  notificações, exportar).
+- components/admin/comum.tsx — `BotaoDaTabela`: a constante BOTAO estava copiada em
+  Motoristas, Administradores e Bancadas e Regiões (14 botões).
+- components/ui/dialogo.tsx, confirmacao.tsx — hook `useDialogoModal`: a lógica de
+  showModal/close estava duplicada. Prop `largura` do Dialogo removida (nunca era passada).
+- motoristas.tsx — a busca reimplementava o CampoFiltro; agora usa o componente.
+- administradores.tsx — "Reativar" chamava a action sem `tentar()` nem aviso (escapou do
+  FE-04); bancadas-regioes.tsx — botão "×" sem nome acessível ganha aria-label "Cancelar".
+
+Mantidos de propósito: Button kind="reversed" sem uso, porque espelha a variante do Figma; as
+páginas de login/troca do motorista e do admin já compartilham os formulários e só diferem no
+texto e na ação.
+
+Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx playwright test 46/46.
+
+Pendências: FE-12 registrado (erro de stream intermitente no servidor durante o E2E).
+

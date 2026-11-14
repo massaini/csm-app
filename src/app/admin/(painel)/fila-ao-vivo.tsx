@@ -14,7 +14,7 @@ import {
   useAvisoTemporario,
   useConsulta,
 } from '@/components/admin/comum';
-import { Chip } from '@/components/ui/basicos';
+import { Chip, MensagemDeErro } from '@/components/ui/basicos';
 import { Confirmacao } from '@/components/ui/confirmacao';
 import { formatarDia } from '@/domain/formato';
 import type { Consulta } from '@/server/filtros-admin';
@@ -175,9 +175,9 @@ export function FilaAoVivo() {
       </BarraDeFiltros>
 
       {aviso || erro ? (
-        <p role="alert" className="t-body-s mt-base text-danger">
+        <MensagemDeErro className="mt-base">
           {aviso ?? 'Sem conexão com o servidor. Tentando novamente…'}
-        </p>
+        </MensagemDeErro>
       ) : null}
 
       <Tabela

@@ -841,9 +841,10 @@ Ordem = prioridade.
 - [x] **FE-03 · (b) Acessibilidade** — semântica HTML, labels, alt text, contraste, navegação por teclado, foco visível.
 - [x] **FE-04 · (c) Estados de UI** — loading, erro, vazio e sucesso em cada tela e ação.
 - [x] **FE-05 · (g) Textos, links e rotas** — textos (ortografia, padrão pt-BR), links quebrados e rotas inexistentes.
-- [ ] **FE-06 · (a) Estrutura de componentes e páginas** — duplicação, componentes órfãos, props não utilizadas.
+- [x] **FE-06 · (a) Estrutura de componentes e páginas** — duplicação, componentes órfãos, props não utilizadas.
 - [ ] **FE-07 · (d) Consistência visual** — espaçamentos, tipografia, cores e componentes repetidos, comparando com o Figma.
 - [ ] **FE-08 · (e) Performance básica** — tamanho de imagens e bundle, re-renders desnecessários, imports pesados.
 - [ ] **FE-09 · (h) Testes de front end** — cobertura e qualidade dos testes dos componentes e telas.
 - [ ] **FE-10 · (h) Banco de testes sem migrations** — o `db_test` usa tmpfs e volta vazio quando o Docker reinicia; `npm test` falha (118 testes de integração) até rodar `prisma migrate deploy` à mão. O E2E já migra no `global-setup`; falta o equivalente no Vitest.
 - [ ] **FE-11 · (b) Campos só com placeholder** — em Bancadas e Regiões, os campos de adicionar/renomear bancada e região não têm rótulo (só placeholder, que some ao digitar). O axe aceita, mas o nome acessível fica frágil.
+- [ ] **FE-12 · (f) Erro de stream no servidor** — numa rodada do E2E o `next dev` registrou `⨯ Error: The destination stream errored while writing data` (digest 4256602640) durante o RF05-CA1, quando a página é recarregada logo após "Agora não". Intermitente; investigar se é só o render abortado pelo cliente ou algo a tratar.

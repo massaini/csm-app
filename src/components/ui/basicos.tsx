@@ -24,6 +24,21 @@ export function Chip({ tom, children }: { tom: Tom; children: ReactNode }) {
   );
 }
 
+/** Mensagem de erro anunciada ao leitor de tela (formulários, banners do painel). */
+export function MensagemDeErro({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <p role="alert" className={`t-body-s text-danger ${className}`}>
+      {children}
+    </p>
+  );
+}
+
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <section className={`rounded-lg border border-border-strong/60 bg-surface p-xl ${className}`}>

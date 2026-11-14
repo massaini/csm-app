@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { sairMotorista } from '@/app/acesso-actions';
 import { FLAG_AGORA_NAO, endpointAtual } from '@/components/push-cliente';
+import { MensagemDeErro } from '@/components/ui/basicos';
 
 /** RF04-CA2/CA3 — "Sair" apaga a inscrição de push do aparelho e o "Agora não" (RF05-CA6). */
 export function SairMotorista() {
@@ -29,9 +30,9 @@ export function SairMotorista() {
   return (
     <>
       {falhou ? (
-        <p role="alert" className="t-body-s text-danger">
+        <MensagemDeErro>
           Não foi possível sair. Verifique sua internet e tente novamente.
-        </p>
+        </MensagemDeErro>
       ) : null}
       <button
         type="button"

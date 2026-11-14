@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { cpfValido, formatarCpf } from '@/domain/documentos';
 import type { EstadoDoFormulario } from '@/app/acesso-actions';
+import { MensagemDeErro } from '@/components/ui/basicos';
 
 type Acao = (estado: EstadoDoFormulario, dados: FormData) => Promise<EstadoDoFormulario>;
 
@@ -46,11 +47,7 @@ export function FormularioLogin({ acao }: { acao: Acao }) {
           placeholder="••••••••"
           erro={estado.erros?.senha}
         />
-        {estado.erro ? (
-          <p role="alert" className="t-body-s text-danger">
-            {estado.erro}
-          </p>
-        ) : null}
+        {estado.erro ? <MensagemDeErro>{estado.erro}</MensagemDeErro> : null}
       </div>
       <Button type="submit" disabled={pendente}>
         {pendente ? 'Entrando…' : 'Entrar'}

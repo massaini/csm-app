@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { CabecalhoDaTela, FALHA_AO_ENVIAR, tentar } from '@/components/admin/comum';
-import { Card } from '@/components/ui/basicos';
+import { Card, MensagemDeErro } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import type { lerConfiguracoes } from '@/server/cadastros';
@@ -149,11 +149,7 @@ export function Configuracoes({ inicial }: { inicial: Cfg }) {
               Configurações salvas.
             </p>
           ) : null}
-          {erros.geral ? (
-            <p role="alert" className="t-body-s text-danger">
-              {erros.geral}
-            </p>
-          ) : null}
+          {erros.geral ? <MensagemDeErro>{erros.geral}</MensagemDeErro> : null}
         </div>
       </form>
     </main>

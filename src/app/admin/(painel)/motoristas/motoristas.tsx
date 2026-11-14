@@ -1,8 +1,15 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { CabecalhoDaTela, FALHA_AO_ENVIAR, Tabela, tentar } from '@/components/admin/comum';
-import { Chip } from '@/components/ui/basicos';
+import {
+  BotaoDaTabela,
+  CabecalhoDaTela,
+  CampoFiltro,
+  FALHA_AO_ENVIAR,
+  Tabela,
+  tentar,
+} from '@/components/admin/comum';
+import { Chip, MensagemDeErro } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
 import { Dialogo, SenhaTemporaria } from '@/components/ui/dialogo';
@@ -18,9 +25,6 @@ import {
 } from '../cadastros-actions';
 
 type Regiao = { id: number; codigo: string; nome: string };
-
-const BOTAO =
-  't-button-m h-[32px] rounded-md border border-border-strong px-md text-primary disabled:opacity-40';
 
 type Pendente = { tipo: 'desativar' | 'redefinir' | 'liberar'; m: MotoristaListado } | null;
 
@@ -98,26 +102,25 @@ export function Motoristas({
         }
       />
 
-      <label className="mt-xl flex max-w-[420px] flex-col gap-xs">
-        <span className="t-overline text-text-muted">Buscar</span>
-        <input
-          className="t-body-s h-[44px] rounded-md border border-border bg-surface px-md placeholder:text-text-muted focus:border-primary focus:outline-none"
-          placeholder="Nome ou CPF"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-      </label>
+      <div className="mt-xl max-w-[420px]">
+        <CampoFiltro rotulo="Buscar">
+          {(classe) => (
+            <input
+              className={classe}
+              placeholder="Nome ou CPF"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          )}
+        </CampoFiltro>
+      </div>
 
       {aviso ? (
         <p role="status" className="t-body-s mt-base text-success">
           {aviso}
         </p>
       ) : null}
-      {erro ? (
-        <p role="alert" className="t-body-s mt-base text-danger">
-          {erro}
-        </p>
-      ) : null}
+      {erro ? <MensagemDeErro className="mt-base">{erro}</MensagemDeErro> : null}
 
       <Tabela
         carregando={false}
@@ -150,32 +153,27 @@ export function Motoristas({
             </td>
             <td className="px-base py-sm">
               <div className="flex flex-wrap gap-xs">
-                <button className={BOTAO} onClick={() => setEditando(m)}>
-                  Editar
-                </button>
+                <BotaoDaTabela onClick={() => setEditando(m)}>Editar</BotaoDaTabela>
                 {m.ativo ? (
                   <>
-                    <button
-                      className={BOTAO}
+                    <BotaoDaTabela
                       disabled={m.liberado}
                       onClick={() => setPendente({ tipo: 'liberar', m })}
                     >
                       Liberar geração de senha
-                    </button>
-                    <button className={BOTAO} onClick={() => setPendente({ tipo: 'redefinir', m })}>
+                    </BotaoDaTabela>
+                    <BotaoDaTabela onClick={() => setPendente({ tipo: 'redefinir', m })}>
                       Redefinir senha
-                    </button>
-                    <button
-                      className={`${BOTAO} text-danger`}
+                    </BotaoDaTabela>
+                    <BotaoDaTabela
+                      className="text-danger"
                       onClick={() => setPendente({ tipo: 'desativar', m })}
                     >
                       Desativar
-                    </button>
+                    </BotaoDaTabela>
                   </>
                 ) : (
-                  <button className={BOTAO} onClick={() => void reativar(m)}>
-                    Reativar
-                  </button>
+                  <BotaoDaTabela onClick={() => void reativar(m)}>Reativar</BotaoDaTabela>
                 )}
               </div>
             </td>
@@ -312,11 +310,7 @@ function FormMotorista({
         </select>
         {erros.regiaoId ? <span className="t-body-s text-danger">{erros.regiaoId}</span> : null}
       </label>
-      {erros.geral ? (
-        <p role="alert" className="t-body-s text-danger">
-          {erros.geral}
-        </p>
-      ) : null}
+      {erros.geral ? <MensagemDeErro>{erros.geral}</MensagemDeErro> : null}
       <div className="mt-sm flex flex-col gap-md">
         <Button type="submit" disabled={salvando}>
           {salvando ? 'Salvando…' : motorista ? 'Salvar' : 'Cadastrar'}

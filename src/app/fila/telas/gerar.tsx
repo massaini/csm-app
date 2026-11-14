@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { AlertBanner, Chip } from '@/components/ui/basicos';
+import { AlertBanner, Chip, MensagemDeErro } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { formatarPlaca, placaValida } from '@/domain/documentos';
@@ -187,11 +187,7 @@ export function TelaGerar({ estado, fila }: { estado: EstadoDa<'GERAR'>; fila: F
         <AlertBanner titulo="Fila estimada agora">{galpao.textoFila}</AlertBanner>
       ) : null}
 
-      {erro ? (
-        <p role="alert" className="t-body-s text-danger">
-          {erro}
-        </p>
-      ) : null}
+      {erro ? <MensagemDeErro>{erro}</MensagemDeErro> : null}
 
       <Button className="mt-sm" disabled={!podeGerar} onClick={() => void gerar()}>
         {fila.enviando ? 'Enviando…' : 'Gerar senha'}

@@ -6,6 +6,7 @@ import { useState, useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/ui/logo';
 import { FLAG_AGORA_NAO, ativarNotificacoes, iphoneSemInstalar } from '@/components/push-cliente';
+import { MensagemDeErro } from '@/components/ui/basicos';
 
 const nunca = () => () => {};
 
@@ -77,10 +78,10 @@ export function AtivarNotificacoes({ chavePublica }: { chavePublica: string }) {
           </Button>
         )}
         {negada ? (
-          <p role="alert" className="t-body-s text-danger">
+          <MensagemDeErro>
             As notificações foram bloqueadas. Mantenha o app aberto para ver a chamada ou libere nas
             configurações do navegador.
-          </p>
+          </MensagemDeErro>
         ) : null}
         <button className="t-body-m min-h-[44px] text-text-secondary underline" onClick={agoraNao}>
           Agora não

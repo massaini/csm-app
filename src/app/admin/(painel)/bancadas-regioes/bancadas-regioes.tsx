@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { CabecalhoDaTela, FALHA_AO_ENVIAR, tentar } from '@/components/admin/comum';
-import { Card, Chip } from '@/components/ui/basicos';
+import { BotaoDaTabela, CabecalhoDaTela, FALHA_AO_ENVIAR, tentar } from '@/components/admin/comum';
+import { Card, Chip, MensagemDeErro } from '@/components/ui/basicos';
 import type { dadosBancadasRegioes, Resultado } from '@/server/cadastros';
 import {
   alterarAtivaBancada,
@@ -18,9 +18,6 @@ type Dados = Awaited<ReturnType<typeof dadosBancadasRegioes>>;
 
 const CAMPO =
   't-body-s h-[40px] rounded-md border border-border bg-bg px-md placeholder:text-text-muted focus:border-primary focus:outline-none';
-const BOTAO =
-  't-button-m h-[32px] rounded-md border border-border-strong px-md text-primary disabled:opacity-40';
-
 /** RF25 — uma tela, três blocos: bancadas por galpão, regiões e o mapeamento. */
 export function BancadasRegioes({ dados }: { dados: Dados }) {
   const [erro, setErro] = useState<string | null>(null);
@@ -44,11 +41,7 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
         titulo="Bancadas e Regiões"
         subtitulo="Cada região atende numa bancada fixa de cada galpão. Uma bancada atende um motorista por vez."
       />
-      {erro ? (
-        <p role="alert" className="t-body-s mt-base text-danger">
-          {erro}
-        </p>
-      ) : null}
+      {erro ? <MensagemDeErro className="mt-base">{erro}</MensagemDeErro> : null}
 
       <h2 className="t-title-s mt-2xl">Bancadas por galpão</h2>
       <div className="mt-base grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-base">
@@ -68,12 +61,11 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
                   />
                   <span className="flex items-center gap-xs">
                     {b.ativa ? null : <Chip tom="neutral">Inativa</Chip>}
-                    <button
-                      className={BOTAO}
+                    <BotaoDaTabela
                       onClick={() => void rodar(() => alterarAtivaBancada(b.id, !b.ativa))}
                     >
                       {b.ativa ? 'Desativar' : 'Reativar'}
-                    </button>
+                    </BotaoDaTabela>
                   </span>
                 </li>
               ))}
@@ -100,12 +92,9 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
               </span>
               <span className="flex items-center gap-xs">
                 {r.ativa ? null : <Chip tom="neutral">Inativa</Chip>}
-                <button
-                  className={BOTAO}
-                  onClick={() => void rodar(() => alterarAtivaRegiao(r.id, !r.ativa))}
-                >
+                <BotaoDaTabela onClick={() => void rodar(() => alterarAtivaRegiao(r.id, !r.ativa))}>
                   {r.ativa ? 'Desativar' : 'Reativar'}
-                </button>
+                </BotaoDaTabela>
               </span>
             </li>
           ))}
@@ -222,12 +211,12 @@ function EdicaoInline({
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
       />
-      <button className={BOTAO} type="submit" disabled={enviando}>
+      <BotaoDaTabela type="submit" disabled={enviando}>
         {enviando ? 'Salvando…' : 'Salvar'}
-      </button>
-      <button className={BOTAO} type="button" onClick={() => setEditando(false)}>
+      </BotaoDaTabela>
+      <BotaoDaTabela aria-label="Cancelar" onClick={() => setEditando(false)}>
         ×
-      </button>
+      </BotaoDaTabela>
     </form>
   );
 }
@@ -256,9 +245,9 @@ function FormUmCampo({
         value={v}
         onChange={(e) => setV(e.target.value)}
       />
-      <button className={BOTAO} type="submit" disabled={!v.trim() || enviando}>
+      <BotaoDaTabela type="submit" disabled={!v.trim() || enviando}>
         Adicionar
-      </button>
+      </BotaoDaTabela>
     </form>
   );
 }
@@ -297,9 +286,9 @@ function NovaRegiao({
         value={nome}
         onChange={(e) => setNome(e.target.value)}
       />
-      <button className={BOTAO} type="submit" disabled={!codigo.trim() || !nome.trim() || enviando}>
+      <BotaoDaTabela type="submit" disabled={!codigo.trim() || !nome.trim() || enviando}>
         Adicionar região
-      </button>
+      </BotaoDaTabela>
     </form>
   );
 }

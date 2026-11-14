@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useId, useRef } from 'react';
+import { useId } from 'react';
 import { Button } from './button';
+import { useDialogoModal } from './dialogo';
 
 /**
  * Overlay de confirmação no padrão de `144:447` (cartão centralizado sobre fundo escurecido).
@@ -28,14 +29,8 @@ export function Confirmacao({
   aoConfirmar: () => void;
   aoFechar: () => void;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
+  const ref = useDialogoModal(aberta);
   const id = useId();
-  useEffect(() => {
-    const d = ref.current;
-    if (!d) return;
-    if (aberta && !d.open) d.showModal();
-    if (!aberta && d.open) d.close();
-  }, [aberta]);
 
   return (
     <dialog

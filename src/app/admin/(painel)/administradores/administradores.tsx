@@ -1,8 +1,14 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { CabecalhoDaTela, FALHA_AO_ENVIAR, Tabela, tentar } from '@/components/admin/comum';
-import { Chip } from '@/components/ui/basicos';
+import {
+  BotaoDaTabela,
+  CabecalhoDaTela,
+  FALHA_AO_ENVIAR,
+  Tabela,
+  tentar,
+} from '@/components/admin/comum';
+import { Chip, MensagemDeErro } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
 import { Dialogo, SenhaTemporaria } from '@/components/ui/dialogo';
@@ -12,9 +18,6 @@ import type { listarAdmins } from '@/server/cadastros';
 import { alterarAtivoAdmin, novoAdmin, redefinirSenhaAdmin } from '../cadastros-actions';
 
 type Admin = Awaited<ReturnType<typeof listarAdmins>>[number];
-const BOTAO =
-  't-button-m h-[32px] rounded-md border border-border-strong px-md text-primary disabled:opacity-40';
-
 export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: number }) {
   const [criando, setCriando] = useState(false);
   const [senha, setSenha] = useState<{ para: string; senha: string } | null>(null);
@@ -42,6 +45,13 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
     setPendente(null);
   }
 
+  async function reativar(a: Admin) {
+    setErro(null);
+    const r = await tentar(() => alterarAtivoAdmin(a.id, true));
+    if (!r) setErro(FALHA_AO_ENVIAR);
+    else if (!r.ok) setErro(Object.values(r.erros)[0]);
+  }
+
   return (
     <main>
       <CabecalhoDaTela
@@ -53,11 +63,7 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
           </Button>
         }
       />
-      {erro ? (
-        <p role="alert" className="t-body-s mt-base text-danger">
-          {erro}
-        </p>
-      ) : null}
+      {erro ? <MensagemDeErro className="mt-base">{erro}</MensagemDeErro> : null}
       <Tabela
         carregando={false}
         vazia="Nenhum administrador"
@@ -100,23 +106,18 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
                 <div className="flex gap-xs">
                   {a.ativo ? (
                     <>
-                      <button
-                        className={BOTAO}
-                        onClick={() => setPendente({ tipo: 'redefinir', a })}
-                      >
+                      <BotaoDaTabela onClick={() => setPendente({ tipo: 'redefinir', a })}>
                         Redefinir senha
-                      </button>
-                      <button
-                        className={`${BOTAO} text-danger`}
+                      </BotaoDaTabela>
+                      <BotaoDaTabela
+                        className="text-danger"
                         onClick={() => setPendente({ tipo: 'desativar', a })}
                       >
                         Desativar
-                      </button>
+                      </BotaoDaTabela>
                     </>
                   ) : (
-                    <button className={BOTAO} onClick={() => void alterarAtivoAdmin(a.id, true)}>
-                      Reativar
-                    </button>
+                    <BotaoDaTabela onClick={() => void reativar(a)}>Reativar</BotaoDaTabela>
                   )}
                 </div>
               )}
@@ -202,11 +203,7 @@ function FormAdmin({
         onChange={(e) => setCpf(formatarCpf(e.target.value))}
         erro={erros.cpf}
       />
-      {erros.geral ? (
-        <p role="alert" className="t-body-s text-danger">
-          {erros.geral}
-        </p>
-      ) : null}
+      {erros.geral ? <MensagemDeErro>{erros.geral}</MensagemDeErro> : null}
       <Button type="submit" disabled={salvando}>
         {salvando ? 'Criando…' : 'Criar administrador'}
       </Button>

@@ -12,7 +12,7 @@ import {
   Tabela,
   useConsulta,
 } from '@/components/admin/comum';
-import { Chip } from '@/components/ui/basicos';
+import { Chip, MensagemDeErro } from '@/components/ui/basicos';
 import { formatarDia, formatarDiaHora } from '@/domain/formato';
 import type { Consulta } from '@/server/filtros-admin';
 import type { historicoAtendimentos, historicoSenhas, RotuloSenha } from '@/server/painel';
@@ -146,9 +146,7 @@ export function HistoricoAtendimentos({
       </LinhaDeKpis>
       <Filtros f={f} mudar={mudar} galpoes={galpoes} />
       {erro ? (
-        <p role="alert" className="t-body-s mt-base text-danger">
-          Sem conexão com o servidor.
-        </p>
+        <MensagemDeErro className="mt-base">Sem conexão com o servidor.</MensagemDeErro>
       ) : null}
       <Tabela
         carregando={!dados}
@@ -228,9 +226,7 @@ export function HistoricoSenhas({
       </LinhaDeKpis>
       <Filtros f={f} mudar={mudar} galpoes={galpoes} />
       {erro ? (
-        <p role="alert" className="t-body-s mt-base text-danger">
-          Sem conexão com o servidor.
-        </p>
+        <MensagemDeErro className="mt-base">Sem conexão com o servidor.</MensagemDeErro>
       ) : null}
       <Tabela
         carregando={!dados}

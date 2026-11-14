@@ -1,11 +1,19 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
 import { POLLING_COM_SSE_MS, useEventos } from '@/components/use-eventos';
 import type { Consulta } from '@/server/filtros-admin';
+import { MensagemDeErro } from '@/components/ui/basicos';
 
 type RespostaConsulta<T> = { tipo: 'ok'; dados: T } | { tipo: 'login' } | { tipo: 'erro' };
 
@@ -161,6 +169,20 @@ export function BarraDeFiltros({ children }: { children: ReactNode }) {
   return <div className="mt-xl flex gap-md">{children}</div>;
 }
 
+/** Botão pequeno das ações em linha das tabelas do painel. */
+export function BotaoDaTabela({
+  className = '',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      {...props}
+      className={`t-button-m h-[32px] rounded-md border border-border-strong px-md text-primary disabled:opacity-40 ${className}`}
+    />
+  );
+}
+
 export interface Coluna {
   titulo: string;
   classe?: string;
@@ -289,11 +311,7 @@ export function BotaoExportar({ consulta }: { consulta: Consulta }) {
       <Button kind="secondary" bloco={false} className="w-[228px]" onClick={() => setAberto(true)}>
         ↓ Exportar
       </Button>
-      {erro ? (
-        <p role="alert" className="t-body-s text-danger">
-          {erro}
-        </p>
-      ) : null}
+      {erro ? <MensagemDeErro>{erro}</MensagemDeErro> : null}
       <Confirmacao
         aberta={aberto}
         titulo="Exportar?"
