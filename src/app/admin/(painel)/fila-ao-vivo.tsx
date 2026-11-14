@@ -42,6 +42,19 @@ function mmss(ms: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** Contagem até o fim da tolerância: só esta célula re-renderiza a cada segundo. */
+function ContagemAtePrazo({ prazoEm, agoraIso }: { prazoEm: string; agoraIso: string }) {
+  const agora = useAgoraServidor(agoraIso);
+  return (
+    <span
+      className="t-body-s tabular-nums text-text-secondary"
+      title="Tempo até o fim da tolerância"
+    >
+      {agora === null ? '—' : mmss(Date.parse(prazoEm) - agora)}
+    </span>
+  );
+}
+
 const CHIP = {
   AGUARDANDO: { tom: 'primary', texto: 'Aguardando' },
   CHAMADA: { tom: 'solido', texto: 'Chamado' },
@@ -72,7 +85,6 @@ export function FilaAoVivo() {
   const [aviso, setAviso] = useAvisoTemporario();
 
   // contagem regressiva das chamadas, pelo relógio do servidor
-  const agora = useAgoraServidor(dados?.agora);
 
   async function executar(acao: () => Promise<RespostaAdmin>) {
     setEnviando(true);
@@ -227,12 +239,7 @@ export function FilaAoVivo() {
               ) : null}
               {l.status === 'CHAMADA' ? (
                 <div className="flex items-center gap-md">
-                  <span
-                    className="t-body-s tabular-nums text-text-secondary"
-                    title="Tempo até o fim da tolerância"
-                  >
-                    {agora === null ? '—' : mmss(Date.parse(l.prazoEm!) - agora)}
-                  </span>
+                  <ContagemAtePrazo prazoEm={l.prazoEm!} agoraIso={dados!.agora} />
                   <button
                     className="t-button-m h-[36px] rounded-md border border-border-strong px-base text-primary disabled:opacity-50"
                     disabled={enviando}

@@ -214,3 +214,24 @@ Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx 
 
 Pendências: nenhuma neste item. O erro de stream do FE-12 apareceu de novo durante as capturas.
 
+## Iteração 8 — 2026-11-14 — FE-08 · Performance básica
+
+Como foi inspecionado: tamanho dos arquivos de public/ (logo 1080×540, 80 KB, servido pelo
+next/image em tamanhos menores; ícones do PWA de 1 a 37 KB); pacotes JS do build (.next/static,
+948 KB no total; o maior, 229 KB, é o react-dom); busca de Zod, Prisma, argon2 e web-push nos
+pacotes do navegador (nenhum); imports das telas de cliente (só react, next e módulos puros de
+src/domain); fontes (Inter, só o subconjunto latino é baixado); todo setInterval do front.
+
+Arquivos alterados:
+- src/app/admin/(painel)/fila-ao-vivo.tsx — o relógio de 1 s (useAgoraServidor) ficava no
+  componente da tela inteira: tabela, filtros e KPIs re-renderizavam a cada segundo, mesmo sem
+  nenhuma senha em CHAMADA. A contagem virou o componente ContagemAtePrazo, com o relógio
+  dentro; só essas células atualizam, e só quando existem.
+
+Mantidos: os relógios das telas Chamado (500 ms) e Em atendimento (1 s) ficam em telas pequenas
+e só existem enquanto há contagem; polling de 4 s/30 s é o do PRD (RNF01).
+
+Verificações: npm test 177 ok, npm run lint ok, tsc ok, npm run build ok, npx playwright test 46/46.
+
+Pendências: nenhuma neste item.
+
