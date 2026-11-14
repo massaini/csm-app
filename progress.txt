@@ -262,3 +262,21 @@ npm run build ok, npx playwright test 46/46.
 
 Pendências: nenhuma neste item.
 
+## Iteração 10 — 2026-11-14 — FE-10 · Banco de testes sem migrations
+
+Problema (achado no FE-03): o container db_test usa tmpfs e volta vazio quando o Docker
+reinicia; o `npm test` falhava em 118 testes de integração até rodar `prisma migrate deploy` à
+mão. O E2E já migrava o próprio banco no global-setup do Playwright.
+
+Arquivos alterados:
+- tests/global-setup.ts (novo) — cria o banco de testes se faltar e aplica as migrações antes
+  da suíte, no mesmo molde do e2e/global-setup.ts. Com o Postgres fora do ar, a mensagem diz
+  para subir os containers com "docker compose up -d".
+- vitest.config.mts — registra o globalSetup.
+
+Verificações: o banco csm_fila_test foi apagado e o `npm test` recriou e migrou sozinho (181
+ok); com a URL apontando para uma porta sem Postgres, a suíte para com a mensagem nova; lint,
+tsc e build ok.
+
+Pendências: nenhuma neste item.
+

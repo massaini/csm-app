@@ -6,6 +6,8 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
     environment: 'node',
+    // cria e migra o banco de testes (o container de testes volta vazio a cada reinício)
+    globalSetup: ['tests/global-setup.ts'],
     // os testes de integração compartilham um único banco
     fileParallelism: false,
     testTimeout: 30_000,
