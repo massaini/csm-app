@@ -131,12 +131,12 @@ export function Motoristas({
           { titulo: 'Telefone' },
           { titulo: 'Região' },
           { titulo: 'Situação' },
-          { titulo: 'Ações', classe: 'w-[420px]' },
+          { titulo: 'Ações', classe: 'w-[360px]' },
         ]}
       >
         {lista.map((m) => (
           <tr key={m.id} className="t-body-m">
-            <td className="t-body-m-strong px-base py-md">{m.nome}</td>
+            <td className="t-body-m-strong whitespace-nowrap px-base py-md">{m.nome}</td>
             <td className="t-body-s whitespace-nowrap px-base py-md tabular-nums text-text-secondary">
               {formatarCpf(m.cpf)}
             </td>
@@ -151,24 +151,22 @@ export function Motoristas({
                 {m.liberado ? <Chip tom="primary">Liberado</Chip> : null}
               </div>
             </td>
-            <td className="px-base py-sm">
-              <div className="flex flex-wrap gap-xs">
+            <td className="px-base py-md">
+              {/* duas colunas alinhadas, com respiro entre os botões */}
+              <div className="grid grid-cols-[repeat(2,max-content)] gap-sm">
                 <BotaoDaTabela onClick={() => setEditando(m)}>Editar</BotaoDaTabela>
                 {m.ativo ? (
                   <>
+                    <BotaoDaTabela onClick={() => setPendente({ tipo: 'redefinir', m })}>
+                      Redefinir senha
+                    </BotaoDaTabela>
                     <BotaoDaTabela
                       disabled={m.liberado}
                       onClick={() => setPendente({ tipo: 'liberar', m })}
                     >
                       Liberar geração de senha
                     </BotaoDaTabela>
-                    <BotaoDaTabela onClick={() => setPendente({ tipo: 'redefinir', m })}>
-                      Redefinir senha
-                    </BotaoDaTabela>
-                    <BotaoDaTabela
-                      className="text-danger"
-                      onClick={() => setPendente({ tipo: 'desativar', m })}
-                    >
+                    <BotaoDaTabela perigo onClick={() => setPendente({ tipo: 'desativar', m })}>
                       Desativar
                     </BotaoDaTabela>
                   </>

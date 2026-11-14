@@ -18,6 +18,9 @@ type Dados = Awaited<ReturnType<typeof dadosBancadasRegioes>>;
 
 const CAMPO =
   't-body-s h-[40px] rounded-md border border-border bg-bg px-md placeholder:text-text-muted focus:border-primary focus:outline-none';
+/** botão dos formulários de inclusão: mesma altura do campo ao lado */
+const BOTAO_FORM =
+  't-button-m h-[40px] shrink-0 whitespace-nowrap rounded-md bg-primary px-base text-on-primary disabled:bg-text-muted/60';
 /** RF25 — uma tela, três blocos: bancadas por galpão, regiões e o mapeamento. */
 export function BancadasRegioes({ dados }: { dados: Dados }) {
   const [erro, setErro] = useState<string | null>(null);
@@ -44,65 +47,89 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
       {erro ? <MensagemDeErro className="mt-base">{erro}</MensagemDeErro> : null}
 
       <h2 className="t-title-s mt-2xl">Bancadas por galpão</h2>
-      <div className="mt-base grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-base">
-        {dados.galpoes.map((g) => (
-          <Card key={g.id} className="!p-base">
-            <p className="t-body-m-strong">{g.nome}</p>
-            <ul className="mt-sm flex flex-col gap-xs">
-              {g.bancadas.length === 0 ? (
-                <li className="t-body-s text-text-muted">Nenhuma bancada</li>
-              ) : null}
-              {g.bancadas.map((b) => (
-                <li key={b.id} className="flex items-center justify-between gap-sm">
-                  <EdicaoInline
-                    valor={b.identificacao}
-                    prefixo="Bancada "
-                    rotulo={`bancada ${b.identificacao} do galpão ${g.nome}`}
-                    aoSalvar={(v) => rodar(() => renomearBancada(b.id, v))}
-                  />
-                  <span className="flex items-center gap-xs">
-                    {b.ativa ? null : <Chip tom="neutral">Inativa</Chip>}
+      <div className="mt-base grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-base">
+        {dados.galpoes.map((g) => {
+          const ativas = g.bancadas.filter((b) => b.ativa).length;
+          return (
+            <Card key={g.id} className="flex flex-col !p-0">
+              <header className="flex items-baseline justify-between gap-sm px-base pb-sm pt-base">
+                <h3 className="t-title-s">{g.nome}</h3>
+                <span className="t-caption text-text-muted">
+                  {ativas} {ativas === 1 ? 'bancada ativa' : 'bancadas ativas'}
+                </span>
+              </header>
+              <ul className="flex flex-col divide-y divide-border border-y border-border">
+                {g.bancadas.length === 0 ? (
+                  <li className="t-body-s px-base py-md text-text-muted">Nenhuma bancada</li>
+                ) : null}
+                {g.bancadas.map((b) => (
+                  <li
+                    key={b.id}
+                    className="flex min-h-[52px] items-center justify-between gap-sm px-base py-sm"
+                  >
+                    <span className="flex items-center gap-sm">
+                      <EdicaoInline
+                        valor={b.identificacao}
+                        prefixo="Bancada "
+                        rotulo={`bancada ${b.identificacao} do galpão ${g.nome}`}
+                        aoSalvar={(v) => rodar(() => renomearBancada(b.id, v))}
+                      />
+                      {b.ativa ? null : <Chip tom="neutral">Inativa</Chip>}
+                    </span>
                     <BotaoDaTabela
+                      perigo={b.ativa}
                       onClick={() => void rodar(() => alterarAtivaBancada(b.id, !b.ativa))}
                     >
                       {b.ativa ? 'Desativar' : 'Reativar'}
                     </BotaoDaTabela>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <FormUmCampo
-              placeholder="Nova bancada (ex.: 09)"
-              rotulo={`Nova bancada no galpão ${g.nome}`}
-              aoEnviar={(v) => rodar(() => novaBancada(g.id, v))}
-            />
-          </Card>
-        ))}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-auto p-base">
+                <FormUmCampo
+                  titulo="Nova bancada"
+                  placeholder="Ex.: 09"
+                  rotulo={`Nova bancada no galpão ${g.nome}`}
+                  aoEnviar={(v) => rodar(() => novaBancada(g.id, v))}
+                />
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       <h2 className="t-title-s mt-2xl">Regiões</h2>
-      <Card className="mt-base !p-base">
-        <ul className="flex flex-col divide-y divide-border">
+      <Card className="mt-base !p-0">
+        <ul className="flex flex-col divide-y divide-border border-b border-border">
+          {dados.regioes.length === 0 ? (
+            <li className="t-body-s px-base py-md text-text-muted">Nenhuma região</li>
+          ) : null}
           {dados.regioes.map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-base py-sm">
+            <li
+              key={r.id}
+              className="grid min-h-[52px] grid-cols-[72px_1fr_auto] items-center gap-base px-base py-sm"
+            >
+              <span className="t-body-m-strong text-primary">{r.codigo}</span>
               <span className="flex items-center gap-sm">
-                <span className="t-body-m-strong w-[48px] text-primary">{r.codigo}</span>
                 <EdicaoInline
                   valor={r.nome}
                   rotulo={`região ${r.codigo}`}
                   aoSalvar={(v) => rodar(() => renomearRegiao(r.id, v))}
                 />
-              </span>
-              <span className="flex items-center gap-xs">
                 {r.ativa ? null : <Chip tom="neutral">Inativa</Chip>}
-                <BotaoDaTabela onClick={() => void rodar(() => alterarAtivaRegiao(r.id, !r.ativa))}>
-                  {r.ativa ? 'Desativar' : 'Reativar'}
-                </BotaoDaTabela>
               </span>
+              <BotaoDaTabela
+                perigo={r.ativa}
+                onClick={() => void rodar(() => alterarAtivaRegiao(r.id, !r.ativa))}
+              >
+                {r.ativa ? 'Desativar' : 'Reativar'}
+              </BotaoDaTabela>
             </li>
           ))}
         </ul>
-        <NovaRegiao aoEnviar={(codigo, nome) => rodar(() => novaRegiao(codigo, nome))} />
+        <div className="p-base">
+          <NovaRegiao aoEnviar={(codigo, nome) => rodar(() => novaRegiao(codigo, nome))} />
+        </div>
       </Card>
 
       <h2 className="t-title-s mt-2xl">Mapeamento região → bancada</h2>
@@ -230,10 +257,12 @@ function EdicaoInline({
 }
 
 function FormUmCampo({
+  titulo,
   placeholder,
   rotulo,
   aoEnviar,
 }: {
+  titulo: string;
   placeholder: string;
   rotulo: string;
   aoEnviar: (v: string) => Promise<boolean>;
@@ -248,17 +277,22 @@ function FormUmCampo({
     if (ok) setV('');
   }
   return (
-    <form onSubmit={enviar} className="mt-md flex gap-xs">
-      <input
-        className={`${CAMPO} min-w-0 flex-1`}
-        aria-label={rotulo}
-        placeholder={placeholder}
-        value={v}
-        onChange={(e) => setV(e.target.value)}
-      />
-      <BotaoDaTabela type="submit" disabled={!v.trim() || enviando}>
-        Adicionar
-      </BotaoDaTabela>
+    <form onSubmit={enviar} className="flex flex-col gap-xs">
+      <span className="t-overline text-text-muted" aria-hidden>
+        {titulo}
+      </span>
+      <div className="flex gap-sm">
+        <input
+          className={`${CAMPO} min-w-0 flex-1`}
+          aria-label={rotulo}
+          placeholder={placeholder}
+          value={v}
+          onChange={(e) => setV(e.target.value)}
+        />
+        <button className={BOTAO_FORM} type="submit" disabled={!v.trim() || enviando}>
+          {enviando ? 'Adicionando…' : 'Adicionar'}
+        </button>
+      </div>
     </form>
   );
 }
@@ -273,7 +307,7 @@ function NovaRegiao({
   const [enviando, setEnviando] = useState(false);
   return (
     <form
-      className="mt-md flex gap-xs"
+      className="flex flex-wrap items-end gap-sm"
       onSubmit={async (e) => {
         e.preventDefault();
         setEnviando(true);
@@ -285,23 +319,33 @@ function NovaRegiao({
         }
       }}
     >
-      <input
-        className={`${CAMPO} w-[120px]`}
-        aria-label="Código da nova região"
-        placeholder="Código (500)"
-        value={codigo}
-        onChange={(e) => setCodigo(e.target.value)}
-      />
-      <input
-        className={`${CAMPO} min-w-0 flex-1`}
-        aria-label="Nome da nova região"
-        placeholder="Nome (Centro de Santo André)"
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-      />
-      <BotaoDaTabela type="submit" disabled={!codigo.trim() || !nome.trim() || enviando}>
-        Adicionar região
-      </BotaoDaTabela>
+      <label className="flex w-[140px] flex-col gap-xs">
+        <span className="t-overline text-text-muted">Código</span>
+        <input
+          className={CAMPO}
+          aria-label="Código da nova região"
+          placeholder="Ex.: 500"
+          value={codigo}
+          onChange={(e) => setCodigo(e.target.value)}
+        />
+      </label>
+      <label className="flex min-w-[240px] flex-1 flex-col gap-xs">
+        <span className="t-overline text-text-muted">Nome</span>
+        <input
+          className={CAMPO}
+          aria-label="Nome da nova região"
+          placeholder="Ex.: Centro de Santo André"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+        />
+      </label>
+      <button
+        className={BOTAO_FORM}
+        type="submit"
+        disabled={!codigo.trim() || !nome.trim() || enviando}
+      >
+        {enviando ? 'Adicionando…' : 'Adicionar região'}
+      </button>
     </form>
   );
 }

@@ -192,16 +192,22 @@ export function BarraDeFiltros({ children }: { children: ReactNode }) {
   return <div className="mt-xl flex gap-md">{children}</div>;
 }
 
-/** Botão pequeno das ações em linha das tabelas do painel. */
+/**
+ * Botão pequeno das ações em linha das tabelas do painel. `perigo` usa a cor danger (desativar);
+ * a cor vem por prop porque duas classes text-* juntas não têm ordem garantida.
+ */
 export function BotaoDaTabela({
+  perigo = false,
   className = '',
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { perigo?: boolean }) {
   return (
     <button
       type="button"
       {...props}
-      className={`t-button-m h-[32px] rounded-md border border-border-strong px-md text-primary disabled:opacity-40 ${className}`}
+      className={`t-button-m h-[32px] whitespace-nowrap rounded-md border border-border-strong px-md disabled:opacity-40 ${
+        perigo ? 'text-danger' : 'text-primary'
+      } ${className}`}
     />
   );
 }
