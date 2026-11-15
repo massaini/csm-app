@@ -328,3 +328,33 @@ Arquivos alterados: nenhum de código.
 
 Pendências: nenhuma.
 
+## Pós-revisão — 2026-11-14 e 2026-11-15 — ajustes pedidos pelo responsável do produto
+
+Fora do checklist FE (pedidos novos). Decisões e critérios estão no PRD v0.6; o panorama geral e os
+próximos passos estão em docs/ANDAMENTO.md.
+
+- Layout: Bancadas e Regiões reorganizada em cards com linhas separadas e formulários com rótulo;
+  ações de Motoristas deixaram de ficar coladas (930444a). BotaoDaTabela passou a receber a cor de
+  perigo por prop (duas classes text-* juntas não têm ordem garantida).
+- RF27-CA4: super-admin edita o nome dos administradores; é o nome que o motorista vê como
+  Conferente (96900dd). Regressão minha nesse commit: a tabela de Administradores perdeu as colunas
+  Papel e Situação; restauradas, com teste que confere as 5 colunas.
+- P28 / RF20: Histórico de Senhas e de Atendimentos unificados em /admin/historico (colunas Espera
+  e Tempo total, filtro de Status, KPIs; rotas antigas redirecionam; CSV `historico_*.csv`).
+- RF31: busca por Nome (padrão) + "Filtrar por" (campos de texto trocam o alvo da barra; opções
+  fechadas viram etiquetas removíveis), colunas ordenáveis (servidor no Histórico, cliente nas listas
+  pequenas). Componentes: components/admin/busca.tsx e components/ui/menu.tsx.
+- RF24-CA8: menu "⋮" em Motoristas (Editar, Ver histórico, Redefinir senha, Liberar geração de senha,
+  Desativar/Reativar). RF20-CA7: "Ver histórico" filtra o Histórico pelo id do motorista.
+- Cursor de mãozinha em tudo que é clicável. next.config: poweredByHeader desligado.
+- Filtro por CPF removido da Fila ao Vivo e do Histórico (não são colunas dessas tabelas); continua
+  em Motoristas e Administradores.
+- RF25-CA7: cada galpão mostra até 5 bancadas; "Ver mais (N)" abre modal com todas (renomear e
+  Desativar/Reativar em cada uma).
+- Infra de teste: os helpers de login do E2E esperam a hidratação (networkidle) e aceitam 30 s; o
+  prazo de expect passou de 8 para 15 s e o de cada teste de 60 para 120 s. Num dia de disco lento
+  (o Next avisou "Slow filesystem detected") 17 testes falhavam logo após o login por perder o clique.
+
+Pendências: ver "Próximos passos" em docs/ANDAMENTO.md (deploy em staging no Railway, cabeçalho de
+IP do proxy, checklist manual em aparelhos, teste de carga, Termos de uso).
+

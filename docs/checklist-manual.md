@@ -11,6 +11,8 @@ ida para produção e registrar data, aparelho e resultado. Enquanto um item est
 | RNF01-CA3 | `npm run test:load` contra o staging (URL_BASE, COOKIE_MOTORISTA, COOKIE_ADMIN): p95 ≤ 500 ms e 0 erros. | [ ] pendente |
 | RNF01-CA4 | Lighthouse mobile (4G simulado) em `/login` e `/fila`: LCP ≤ 2,5 s. | [ ] pendente |
 | RNF02-CA5 | No domínio do Railway: `http://` redireciona para `https://` e o cookie de sessão sai com `Secure`. | [ ] pendente |
+| RF01-CA4 | O Railway documenta `X-Real-IP` como o IP do cliente. No staging, confirmar que `ipDoCliente()` (`src/server/http-sessao.ts`) devolve o IP real do aparelho, não o do proxy (ex.: errar a senha 5 vezes de um celular e ver o `TentativaLogin.ip` gravado). | [ ] pendente |
+| Deploy | As respostas não trazem `X-Powered-By` e o `/api/e2e` devolve 404 (só existe com `E2E=1`, que nunca vai para o ambiente). | [ ] pendente |
 | RNF04-CA3 | Screenshots do Playwright (390×844 e 1440×900) lado a lado com o Figma, tela a tela (10:2, 233:440, 12:2, 13:2, 144:447, 18:2, 19:2, 19:35, 19:64, 170:26, 171:95, 172:170, 216:470). | [ ] pendente |
 
 ## Push em aparelho real (complementa RF18-CA4)

@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **CSM Fila Digital** — a digital queue for truck drivers at CSM (road freight carrier): drivers generate a password ("senha") at the yard, follow their position and get called to a loading bench ("bancada"); admins run the queue from a web panel. Scope of the current cycle: **MVP da Fila only** (driver PWA + admin panel). Availability, Demonstrativo/Acareação and Google Sheets are out of scope.
 
-The product is **specified but not yet scaffolded**: no `package.json`, `src/` or `prisma/` exist at the time of writing (PRD approved, project setup is the next step). Until the scaffold lands there is nothing to build, lint or test — re-check with `ls` before assuming either way.
+The MVP is **built and tested locally** (driver PWA + admin panel, real time, push, registrations, history, CSV export) and the front-end review is done. **What remains is the Railway deploy and real-device validation.** Current status, run instructions, pitfalls and the ordered next steps live in **`docs/ANDAMENTO.md` — read it first**; `progress.txt` is the diary of the front-end review (PRD §13).
 
 Source of truth, in order:
-1. **`docs/PRD.md`** (v0.5, approved, committed) — requirements (RF/RNF with acceptance criteria), domain model, state machine, formulas, tech spec, test strategy, design tokens. Read the relevant section before implementing; do not re-derive rules from the Figma.
+1. **`docs/PRD.md`** (v0.6, approved, committed) — requirements (RF/RNF with acceptance criteria), domain model, state machine, formulas, tech spec, test strategy, design tokens. Read the relevant section before implementing; do not re-derive rules from the Figma.
 2. **Figma** file key `TSxGXyq7qLD3K4aCGtfjZD` (`CSM-fila-motorista`, student-tier account; the Starter-tier copy `TsxJquZYqYarMTrOligbTu` is stale) — validated by the client; UI is implemented faithfully from it, except for the deviations listed in PRD §10.6. Read it through the Figma MCP (`get_screenshot`, `get_metadata`, `get_design_context`, `get_variable_defs`) with the `figma-implement-design` skill. Cite screens by **node id** (`233:440`), never by number — Figma has two frames named "03".
 3. **`docs/CONTEXTO.md`** — business context and client decisions. **Git-ignored on purpose** (see `.gitignore`); never commit it or move its content into tracked files verbatim.
 
@@ -17,8 +17,9 @@ Source of truth, in order:
 
 ## Commands
 
-Target scripts, defined in PRD §9.5 (they exist only after the scaffold; verify in `package.json`): `npm run dev | build | start | lint | typecheck | test | test:e2e | test:load | test:ca-coverage | db:migrate | db:deploy | db:seed | admin:transferir-super | admin:redefinir-senha`.
+Scripts in `package.json`: `dev | build | start | lint | typecheck | test | test:e2e | test:load | test:ca-coverage | db:up | db:migrate | db:deploy | db:seed | admin:transferir-super | admin:redefinir-senha`. Full verification before a code commit: `npm test`, `npm run test:ca-coverage`, `npm run lint`, `npx tsc --noEmit`, `npm run build`, `npx playwright test`.
 
+- **`npm run <script>` fails silently (exit 1) in Git Bash on this machine**: use PowerShell, or call the tool directly (`npx next dev`, `npx vitest run`) and always check the exit code.
 - Package manager is **npm** (pnpm is not installed). Node 22.
 - Run one Vitest file/test: `npx vitest run path/to/file.test.ts -t "RF13-CA2"`; one Playwright spec: `npx playwright test path/to/spec.ts`.
 - `test:ca-coverage` fails if any `RFxx-CAy` / `RNFxx-CAy` of the PRD is missing from a test name (or `docs/checklist-manual.md`), and `skip`/`todo` tests do not count. **Name every test with its CA id**, e.g. `it('RF13-CA2: aceita Estou a caminho até prazo + carência')`. PRD §9.6 assigns each CA to unit / integration / E2E / load / manual.
@@ -29,7 +30,7 @@ Next.js 16.4 (App Router) · React 19 · **TypeScript 5.9.3** (7.x breaks the `t
 
 ## Architecture (the parts that span files)
 
-Single Next.js monolith: Server Components for reads, Server Actions/route handlers for mutations. Planned layers: `src/domain/` (pure rules + an injectable `Clock`, no I/O), `src/server/` (db, auth, push, realtime, jobs), `src/app/(motorista)/` and `src/app/admin/` (screens), `src/components/ui/` (design-system components).
+Single Next.js monolith: Server Components for reads, Server Actions/route handlers for mutations. Layers: `src/domain/` (pure rules + an injectable `Clock`, no I/O), `src/server/` (db, auth, push, realtime, jobs), `src/app/(motorista)/` and `src/app/admin/` (screens), `src/components/ui/` (design-system components).
 
 **Senha state machine** (PRD §6.0) — `AGUARDANDO → CHAMADA → EM_ATENDIMENTO → CONCLUIDA`, with `CANCELADA` (motivos `MOTORISTA`, `EXPIRADA`, `FIM_DO_DIA`, `MOTORISTA_DESATIVADO`). Rules that are easy to break:
 - Every transition is `UPDATE … WHERE id = ? AND status = <esperado>` (`CHAMADA → EM_ATENDIMENTO` also checks `prazoEm + carência >= agora`); zero rows = `CONFLITO`. Mutations return `{ ok, codigo, estado }`; `CONFLITO` is HTTP 409 in route handlers. The driver UI never shows it as an error — it renders the returned `estado`.
@@ -49,6 +50,13 @@ Single Next.js monolith: Server Components for reads, Server Actions/route handl
 **Galpões (5)**: F SDR and SP-R-D228 (the Anjun) at Av. André Ramalho 89; DS AET at Av. André Ramalho 95; F SDR 03 and DS SDE at Av. dos Estados 6761. Display name for Anjun is **"SP-R-D228"**. The seed only *creates* missing rows and must never overwrite configuration, radius or the super-admin password.
 
 **Testing time-dependent flows**: Playwright's `page.clock` only controls the browser; with `E2E=1` the server exposes a test endpoint to advance the server `Clock` and tests advance both.
+
+## Working rules
+
+- Before **any commit**, check `git config user.email` is the owner's personal address and `gh auth status` has the personal GitHub account active (not the academic one); if not, stop and warn. Commit and push only when the owner asks.
+- The PRD is the source of truth: when behavior changes, update the PRD (and its version) in the same commit. New issues found during a review are registered in PRD §13 as unchecked items before being fixed.
+- Admin listings use the shared pattern of PRD RF31 (`components/admin/busca.tsx`: search bar + "Filtrar por" + removable chips + sortable columns); row actions use `components/ui/menu.tsx`. Filters exist only for fields that are columns of the table.
+- The E2E suite fails a test if the browser console logs an error/warning not declared with `permitirNoConsole()`, and runs an axe WCAG A/AA audit on every screen (`e2e/acessibilidade.spec.ts`).
 
 ## Design system
 
