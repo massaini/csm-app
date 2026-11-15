@@ -29,8 +29,10 @@
     "@prisma/client": "^7.10.1",
     "next": "16.4.5",
     "pg": "^8.23.1",
+    "prisma": "^7.10.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "tsx": "^4.23.15",
     "web-push": "^4.0.0",
     "zod": "^4.6.7"
   },
@@ -47,9 +49,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "prettier": "^3.10.0",
-    "prisma": "^7.10.1",
     "tailwindcss": "^4",
-    "tsx": "^4.23.15",
     "typescript": "5.9.3",
     "vitest": "^5.1.0"
   },

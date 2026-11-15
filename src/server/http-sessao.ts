@@ -13,7 +13,7 @@ export const authDeps = () => ({ db, clock: relogioApp });
  * IP do cliente para o limite de tentativas (RF01-CA4). Nunca o primeiro valor de
  * `X-Forwarded-For` (o cliente pode forjá-lo): prefere `X-Real-IP` do proxy e, na falta,
  * o último valor de `X-Forwarded-For` (o acrescentado pelo proxy mais próximo).
- * TODO(setup Railway): confirmar na documentação qual cabeçalho o proxy preenche.
+ * No Railway o proxy envia `X-Real-IP` com o IP do cliente (docs.railway.com, Specs & Limits).
  */
 export async function ipDoCliente(): Promise<string> {
   const h = await headers();
