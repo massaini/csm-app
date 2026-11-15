@@ -33,7 +33,7 @@ test('FE-04: falha ao salvar motorista mostra o erro e libera o botão', async (
   const admin = await (await contextoAdmin(browser)).newPage();
   await entrarAdmin(admin);
   await admin.goto('/admin/motoristas');
-  await expect(admin.getByRole('cell', { name: 'João da Silva' })).toBeVisible();
+  await expect(admin.getByRole('cell', { name: 'João da Silva', exact: true })).toBeVisible();
   await derrubarAcoes(admin);
 
   await admin.getByRole('button', { name: '+ Novo motorista' }).click();
@@ -53,7 +53,8 @@ test('FE-04: falha numa confirmação do painel fecha o diálogo e avisa', async
   await expect(linha).toBeVisible();
   await derrubarAcoes(admin);
 
-  await linha.getByRole('button', { name: 'Desativar' }).click();
+  await linha.getByRole('button', { name: 'Ações de João da Silva' }).click();
+  await admin.getByRole('menuitem', { name: 'Desativar' }).click();
   await admin.getByRole('dialog').getByRole('button', { name: 'Desativar' }).click();
   await expect(admin.getByRole('dialog')).toBeHidden();
   await expect(admin.getByRole('alert').filter({ hasText: FALHA })).toBeVisible();

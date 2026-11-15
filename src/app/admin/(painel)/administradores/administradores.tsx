@@ -2,6 +2,16 @@
 
 import { useState, type FormEvent } from 'react';
 import {
+  BarraDeBusca,
+  estadoInicial,
+  filtrarLocal,
+  ordenarLocal,
+  proximaOrdem,
+  type Campo,
+  type EstadoBusca,
+  type Ordem,
+} from '@/components/admin/busca';
+import {
   BotaoDaTabela,
   CabecalhoDaTela,
   FALHA_AO_ENVIAR,
@@ -23,9 +33,49 @@ import {
 } from '../cadastros-actions';
 
 type Admin = Awaited<ReturnType<typeof listarAdmins>>[number];
+
+const papel = (a: Admin) => (a.papel === 'SUPER_ADMIN' ? 'Super-administrador' : 'Administrador');
+const situacoes = (a: Admin) => [
+  a.ativo ? 'Ativo' : 'Inativo',
+  ...(a.ativo && a.deveTrocarSenha ? ['Troca pendente'] : []),
+];
+
+const CAMPOS: Campo[] = [
+  { chave: 'nome', rotulo: 'Nome', tipo: 'texto' },
+  { chave: 'cpf', rotulo: 'CPF', tipo: 'texto' },
+  {
+    chave: 'papel',
+    rotulo: 'Papel',
+    tipo: 'opcoes',
+    opcoes: ['Super-administrador', 'Administrador'].map((v) => ({ valor: v, rotulo: v })),
+  },
+  {
+    chave: 'situacao',
+    rotulo: 'Situação',
+    tipo: 'opcoes',
+    opcoes: ['Ativo', 'Inativo', 'Troca pendente'].map((v) => ({ valor: v, rotulo: v })),
+  },
+];
 export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: number }) {
   const [criando, setCriando] = useState(false);
   const [renomeando, setRenomeando] = useState<Admin | null>(null);
+  const [busca, setBusca] = useState<EstadoBusca>(estadoInicial());
+  const [ordem, setOrdem] = useState<Ordem | null>(null);
+  const visiveis = ordenarLocal(
+    filtrarLocal(admins, busca, {
+      nome: (a) => a.nome,
+      cpf: (a) => a.cpf,
+      papel,
+      situacao: situacoes,
+    }),
+    ordem,
+    {
+      nome: (a) => a.nome,
+      cpf: (a) => a.cpf,
+      papel,
+      situacao: (a) => situacoes(a).join(' '),
+    },
+  );
   const [senha, setSenha] = useState<{ para: string; senha: string } | null>(null);
   const [pendente, setPendente] = useState<{ tipo: 'desativar' | 'redefinir'; a: Admin } | null>(
     null,
@@ -70,18 +120,21 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
         }
       />
       {erro ? <MensagemDeErro className="mt-base">{erro}</MensagemDeErro> : null}
+      <BarraDeBusca campos={CAMPOS} estado={busca} aoMudar={setBusca} />
       <Tabela
         carregando={false}
-        vazia="Nenhum administrador"
+        vazia="Nenhum administrador encontrado"
+        ordem={ordem}
+        aoOrdenar={(c) => setOrdem(proximaOrdem(ordem, c))}
         colunas={[
-          { titulo: 'Nome' },
-          { titulo: 'CPF' },
-          { titulo: 'Papel' },
-          { titulo: 'Situação' },
+          { titulo: 'Nome', ordenar: 'nome' },
+          { titulo: 'CPF', ordenar: 'cpf' },
+          { titulo: 'Papel', ordenar: 'papel' },
+          { titulo: 'Situação', ordenar: 'situacao' },
           { titulo: 'Ações' },
         ]}
       >
-        {admins.map((a) => (
+        {visiveis.map((a) => (
           <tr key={a.id} className="t-body-m">
             <td className="t-body-m-strong px-base py-md">
               {a.nome}
@@ -91,6 +144,15 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
             </td>
             <td className="t-body-s whitespace-nowrap px-base py-md tabular-nums text-text-secondary">
               {formatarCpf(a.cpf)}
+            </td>
+            <td className="px-base py-md">
+              <Chip tom={a.papel === 'SUPER_ADMIN' ? 'primary' : 'neutral'}>{papel(a)}</Chip>
+            </td>
+            <td className="px-base py-md">
+              <div className="flex gap-xs">
+                {a.ativo ? <Chip tom="success">Ativo</Chip> : <Chip tom="neutral">Inativo</Chip>}
+                {a.ativo && a.deveTrocarSenha ? <Chip tom="warning">Troca pendente</Chip> : null}
+              </div>
             </td>
             <td className="px-base py-md">
               <div className="flex gap-sm">

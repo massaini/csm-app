@@ -35,7 +35,7 @@ describe('dia operacional (America/Sao_Paulo)', () => {
 });
 
 describe('quinzena e períodos', () => {
-  it('RF21-CA3: dias 1–15 e 16–último do mês', () => {
+  it('RF20-CA3: atalho "Quinzena atual" vai dos dias 1–15 ou 16–último do mês', () => {
     expect(quinzenaDoDia('2026-10-12')).toEqual({ diaInicio: '2026-10-01', diaFim: '2026-10-15' });
     expect(quinzenaDoDia('2026-10-16')).toEqual({ diaInicio: '2026-10-16', diaFim: '2026-10-31' });
     expect(quinzenaDoDia('2026-02-20')).toEqual({ diaInicio: '2026-02-16', diaFim: '2026-02-28' });

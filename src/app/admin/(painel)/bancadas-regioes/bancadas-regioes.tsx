@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from 'react';
 import { BotaoDaTabela, CabecalhoDaTela, FALHA_AO_ENVIAR, tentar } from '@/components/admin/comum';
 import { Card, Chip, MensagemDeErro } from '@/components/ui/basicos';
+import { Button } from '@/components/ui/button';
+import { Dialogo } from '@/components/ui/dialogo';
 import type { dadosBancadasRegioes, Resultado } from '@/server/cadastros';
 import {
   alterarAtivaBancada,
@@ -15,6 +17,10 @@ import {
 } from '../cadastros-actions';
 
 type Dados = Awaited<ReturnType<typeof dadosBancadasRegioes>>;
+type GalpaoDados = Dados['galpoes'][number];
+
+/** Quantas bancadas cada card mostra; o resto fica em "Ver mais" (modal). */
+const BANCADAS_NO_CARD = 5;
 
 const CAMPO =
   't-body-s h-[40px] rounded-md border border-border bg-bg px-md placeholder:text-text-muted focus:border-primary focus:outline-none';
@@ -24,6 +30,7 @@ const BOTAO_FORM =
 /** RF25 — uma tela, três blocos: bancadas por galpão, regiões e o mapeamento. */
 export function BancadasRegioes({ dados }: { dados: Dados }) {
   const [erro, setErro] = useState<string | null>(null);
+  const [verTodas, setVerTodas] = useState<number | null>(null);
 
   async function rodar(acao: () => Promise<Resultado>) {
     setErro(null);
@@ -37,6 +44,34 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
   }
 
   const regioesAtivas = dados.regioes.filter((r) => r.ativa);
+  // o modal lê o galpão dos dados atuais: desativar/renomear dentro dele atualiza a lista
+  const galpaoAberto = dados.galpoes.find((g) => g.id === verTodas) ?? null;
+
+  function linhaDaBancada(g: GalpaoDados, b: GalpaoDados['bancadas'][number]) {
+    return (
+      <li
+        key={b.id}
+        className="flex min-h-[52px] items-center justify-between gap-sm px-base py-sm"
+      >
+        <span className="flex items-center gap-sm">
+          <EdicaoInline
+            valor={b.identificacao}
+            prefixo="Bancada "
+            rotulo={`bancada ${b.identificacao} do galpão ${g.nome}`}
+            aoSalvar={(v) => rodar(() => renomearBancada(b.id, v))}
+          />
+          {b.ativa ? null : <Chip tom="neutral">Inativa</Chip>}
+        </span>
+        <BotaoDaTabela
+          perigo={b.ativa}
+          aria-label={`${b.ativa ? 'Desativar' : 'Reativar'} bancada ${b.identificacao} do galpão ${g.nome}`}
+          onClick={() => void rodar(() => alterarAtivaBancada(b.id, !b.ativa))}
+        >
+          {b.ativa ? 'Desativar' : 'Reativar'}
+        </BotaoDaTabela>
+      </li>
+    );
+  }
 
   return (
     <main>
@@ -44,7 +79,7 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
         titulo="Bancadas e Regiões"
         subtitulo="Cada região atende numa bancada fixa de cada galpão. Uma bancada atende um motorista por vez."
       />
-      {erro ? <MensagemDeErro className="mt-base">{erro}</MensagemDeErro> : null}
+      {erro && !galpaoAberto ? <MensagemDeErro className="mt-base">{erro}</MensagemDeErro> : null}
 
       <h2 className="t-title-s mt-2xl">Bancadas por galpão</h2>
       <div className="mt-base grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-base">
@@ -62,28 +97,19 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
                 {g.bancadas.length === 0 ? (
                   <li className="t-body-s px-base py-md text-text-muted">Nenhuma bancada</li>
                 ) : null}
-                {g.bancadas.map((b) => (
-                  <li
-                    key={b.id}
-                    className="flex min-h-[52px] items-center justify-between gap-sm px-base py-sm"
-                  >
-                    <span className="flex items-center gap-sm">
-                      <EdicaoInline
-                        valor={b.identificacao}
-                        prefixo="Bancada "
-                        rotulo={`bancada ${b.identificacao} do galpão ${g.nome}`}
-                        aoSalvar={(v) => rodar(() => renomearBancada(b.id, v))}
-                      />
-                      {b.ativa ? null : <Chip tom="neutral">Inativa</Chip>}
-                    </span>
-                    <BotaoDaTabela
-                      perigo={b.ativa}
-                      onClick={() => void rodar(() => alterarAtivaBancada(b.id, !b.ativa))}
+                {g.bancadas.slice(0, BANCADAS_NO_CARD).map((b) => linhaDaBancada(g, b))}
+                {g.bancadas.length > BANCADAS_NO_CARD ? (
+                  <li className="px-base py-sm">
+                    <button
+                      type="button"
+                      onClick={() => setVerTodas(g.id)}
+                      aria-label={`Ver mais bancadas do galpão ${g.nome}`}
+                      className="t-button-m flex h-[36px] w-full items-center justify-center rounded-md text-primary hover:bg-elevated"
                     >
-                      {b.ativa ? 'Desativar' : 'Reativar'}
-                    </BotaoDaTabela>
+                      Ver mais ({g.bancadas.length - BANCADAS_NO_CARD})
+                    </button>
                   </li>
-                ))}
+                ) : null}
               </ul>
               <div className="mt-auto p-base">
                 <FormUmCampo
@@ -97,6 +123,24 @@ export function BancadasRegioes({ dados }: { dados: Dados }) {
           );
         })}
       </div>
+
+      <Dialogo
+        aberto={galpaoAberto !== null}
+        titulo={galpaoAberto ? `Bancadas · ${galpaoAberto.nome}` : 'Bancadas'}
+        aoFechar={() => setVerTodas(null)}
+      >
+        {galpaoAberto ? (
+          <>
+            {erro ? <MensagemDeErro>{erro}</MensagemDeErro> : null}
+            <ul className="-mx-base flex max-h-[60dvh] flex-col divide-y divide-border overflow-y-auto border-y border-border">
+              {galpaoAberto.bancadas.map((b) => linhaDaBancada(galpaoAberto, b))}
+            </ul>
+            <Button kind="secondary" className="mt-base" onClick={() => setVerTodas(null)}>
+              Fechar
+            </Button>
+          </>
+        ) : null}
+      </Dialogo>
 
       <h2 className="t-title-s mt-2xl">Regiões</h2>
       <Card className="mt-base !p-0">

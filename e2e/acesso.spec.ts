@@ -95,7 +95,7 @@ test('RF27-CA2: um admin comum não vê nem acessa Administradores', async ({ br
   await expect(admin).toHaveURL(/\/admin$/);
 });
 
-test('RNF02-CA4: buscar motorista por CPF no painel não põe o CPF em nenhuma URL', async ({
+test('RNF02-CA4 / RF31-CA4: buscar no painel (CPF em Motoristas, nome na fila) não põe dados em nenhuma URL', async ({
   browser,
 }) => {
   const admin = await (await contextoAdmin(browser)).newPage();
@@ -103,14 +103,16 @@ test('RNF02-CA4: buscar motorista por CPF no painel não põe o CPF em nenhuma U
   admin.on('request', (r) => urls.push(r.url()));
   await entrarAdmin(admin);
   await admin.goto('/admin/motoristas');
-  await admin.getByPlaceholder('Nome ou CPF').fill(CPF.joao);
-  await expect(admin.getByRole('cell', { name: 'João da Silva' })).toBeVisible();
+  await admin.getByRole('button', { name: 'Filtrar por' }).click();
+  await admin.getByRole('menuitem', { name: 'CPF' }).click();
+  await admin.getByPlaceholder('Buscar por cpf').fill(CPF.joao);
+  await expect(admin.getByRole('cell', { name: 'João da Silva', exact: true })).toBeVisible();
   await admin.goto('/admin');
-  // espera a busca sair: o CPF tem de ir no corpo do POST, não na URL
+  // a Fila ao Vivo busca por nome e vai no corpo do POST; a URL nunca leva dados da busca
   const busca = admin.waitForRequest(
-    (r) => r.url().endsWith('/api/admin/consulta') && (r.postData() ?? '').includes(CPF.maria),
+    (r) => r.url().endsWith('/api/admin/consulta') && (r.postData() ?? '').includes('Maria'),
   );
-  await admin.getByPlaceholder('Buscar nome ou CPF').fill(CPF.maria);
+  await admin.getByPlaceholder('Buscar por nome').fill('Maria');
   expect((await busca).method()).toBe('POST');
   const comCpf = urls.filter(
     (u) => u.includes(CPF.joao) || u.includes(CPF.maria) || u.includes(CPF.superAdmin),

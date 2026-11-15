@@ -1,49 +1,31 @@
 import type { Prisma, Senha } from '@/generated/prisma/client';
 import { limitesDoDia } from '@/domain/dia';
-import { somenteDigitos } from '@/domain/documentos';
 import { minutosExibidos, temposDaSenha } from '@/domain/fila';
 import { formatarDataHora, paraCsv } from '@/domain/formato';
 import { ocupaBancada, statusEfetivo } from '@/domain/senha';
+import type {
+  ColunaHistorico,
+  FiltrosFila,
+  FiltrosHistorico,
+  StatusHistorico,
+} from '@/server/filtros-admin';
 import type { Deps } from '@/server/senhas';
 
 const hora = (d: Deps) => d.horaVirada ?? process.env.HORA_VIRADA ?? '00:00';
 export const POR_PAGINA = 50;
 export const LIMITE_EXPORTACAO = 10_000;
 
-export interface FiltrosBase {
-  galpaoId?: number | null;
-  /** nome ou CPF; chega por POST, nunca pela URL (RNF02-CA4) */
-  motorista?: string | null;
-  codigo?: string | null;
+type Busca = Pick<FiltrosFila, 'texto' | 'campo'>;
+
+/** RF31-CA1: texto na barra de busca, no campo escolhido; chega por POST (RNF02-CA4). */
+function filtroBusca(f: Busca): Prisma.SenhaWhereInput[] {
+  const termo = f.texto?.trim();
+  if (!termo) return [];
+  if (f.campo === 'codigo') return [{ codigo: { contains: termo.toUpperCase() } }];
+  return [{ motoristaNome: { contains: termo, mode: 'insensitive' } }];
 }
 
-export interface FiltrosFila extends FiltrosBase {
-  bancadaId?: number | null;
-}
-
-export interface FiltrosPeriodo extends FiltrosBase {
-  /** "AAAA-MM-DD", inclusivos */
-  diaInicio: string;
-  diaFim: string;
-  pagina?: number;
-}
-
-function filtroMotoristaECodigo(f: FiltrosBase): Prisma.SenhaWhereInput[] {
-  const e: Prisma.SenhaWhereInput[] = [];
-  const termo = f.motorista?.trim();
-  if (termo) {
-    const digitos = somenteDigitos(termo);
-    e.push({
-      OR: [
-        { motoristaNome: { contains: termo, mode: 'insensitive' } },
-        ...(digitos.length >= 3 ? [{ motorista: { cpf: { contains: digitos } } }] : []),
-      ],
-    });
-  }
-  const codigo = f.codigo?.trim().toUpperCase();
-  if (codigo) e.push({ codigo: { contains: codigo } });
-  return e;
-}
+const emLista = <T>(xs: T[] | undefined) => (xs && xs.length ? { in: xs } : undefined);
 
 async function configuracao(deps: Deps) {
   return deps.db.configuracao.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } });
@@ -91,9 +73,10 @@ export async function filaAoVivo(deps: Deps, f: FiltrosFila = {}): Promise<FilaA
   const cfg = await configuracao(deps);
   const { dia } = limitesDoDia(agora, hora(deps));
 
+  // galpão e bancada também filtram os KPIs; busca e status, não (6.0)
   const doLocal: Prisma.SenhaWhereInput = {
-    ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}),
-    ...(f.bancadaId ? { bancadaId: f.bancadaId } : {}),
+    ...(emLista(f.galpaoIds) ? { galpaoId: emLista(f.galpaoIds) } : {}),
+    ...(emLista(f.bancadaIds) ? { bancadaId: emLista(f.bancadaIds) } : {}),
   };
   const ativasBrutas = await db.senha.findMany({
     where: { status: { in: ['AGUARDANDO', 'CHAMADA', 'EM_ATENDIMENTO'] }, ...doLocal },
@@ -120,14 +103,15 @@ export async function filaAoVivo(deps: Deps, f: FiltrosFila = {}): Promise<FilaA
   const visiveis = new Set(
     (
       await db.senha.findMany({
-        where: { id: { in: ativas.map((s) => s.id) }, AND: filtroMotoristaECodigo(f) },
+        where: { id: { in: ativas.map((s) => s.id) }, AND: filtroBusca(f) },
         select: { id: true },
       })
     ).map((s) => s.id),
   );
 
+  const status = f.status?.length ? new Set(f.status) : null;
   const linhas: LinhaFila[] = ativas
-    .filter((s) => visiveis.has(s.id))
+    .filter((s) => visiveis.has(s.id) && (!status || status.has(s.status as StatusFila)))
     .map((s) => {
       const desde = s.status === 'AGUARDANDO' ? s.geradaEm : (s.chamadaEm ?? s.geradaEm);
       const ocupante = ocupadas.get(s.bancadaId);
@@ -185,7 +169,7 @@ export async function filaAoVivo(deps: Deps, f: FiltrosFila = {}): Promise<FilaA
   };
 }
 
-/* ------------------------------------------------------- Histórico de Atendimentos */
+/* ------------------------------------------------------------------- Histórico (RF20) */
 
 function totalMin(s: Senha): number | null {
   if (s.status !== 'CONCLUIDA' || !s.chamadaEm || !s.concluidaEm) return null;
@@ -200,61 +184,115 @@ function totalMin(s: Senha): number | null {
   );
 }
 
-function wherePeriodo(f: FiltrosPeriodo, status: Prisma.SenhaWhereInput): Prisma.SenhaWhereInput {
+function esperaMin(s: Senha): number | null {
+  return s.chamadaEm ? minutos(s.chamadaEm.getTime() - s.geradaEm.getTime()) : null;
+}
+
+export type RotuloSenha = 'Aguardando' | 'Atendendo' | 'Concluída' | 'Cancelada';
+
+function rotulo(s: Senha, agora: Date, carenciaSeg: number): RotuloSenha {
+  const ef = statusEfetivo(s, agora, carenciaSeg).status;
+  if (ef === 'AGUARDANDO') return 'Aguardando';
+  if (ef === 'CHAMADA' || ef === 'EM_ATENDIMENTO') return 'Atendendo';
+  if (ef === 'CONCLUIDA') return 'Concluída';
+  return 'Cancelada';
+}
+
+const STATUS_DO_FILTRO: Record<StatusHistorico, Senha['status'][]> = {
+  AGUARDANDO: ['AGUARDANDO'],
+  ATENDENDO: ['CHAMADA', 'EM_ATENDIMENTO'],
+  CONCLUIDA: ['CONCLUIDA'],
+  CANCELADA: ['CANCELADA'],
+};
+
+const CAMPO_DA_COLUNA: Record<ColunaHistorico, keyof Prisma.SenhaOrderByWithRelationInput> = {
+  geradaEm: 'geradaEm',
+  codigo: 'codigo',
+  motorista: 'motoristaNome',
+  galpao: 'galpaoNome',
+  bancada: 'bancadaIdentificacao',
+  rota: 'regiaoCodigo',
+  status: 'status',
+};
+
+/** Só galpão e período: é o recorte dos KPIs (6.0). */
+function doGalpao(f: FiltrosHistorico): Prisma.SenhaWhereInput {
+  return emLista(f.galpaoIds) ? { galpaoId: emLista(f.galpaoIds) } : {};
+}
+
+function whereHistorico(f: FiltrosHistorico): Prisma.SenhaWhereInput {
+  const status = f.status?.flatMap((s) => STATUS_DO_FILTRO[s]);
   return {
-    ...status,
     dia: { gte: f.diaInicio, lte: f.diaFim },
-    ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}),
-    AND: filtroMotoristaECodigo(f),
+    ...doGalpao(f),
+    ...(emLista(f.bancadaIds) ? { bancadaId: emLista(f.bancadaIds) } : {}),
+    ...(emLista(f.rotas) ? { regiaoCodigo: emLista(f.rotas) } : {}),
+    ...(emLista(status) ? { status: emLista(status) } : {}),
+    ...(f.motoristaId ? { motoristaId: f.motoristaId } : {}),
+    AND: filtroBusca(f),
   };
 }
 
-export interface LinhaAtendimento {
-  id: number;
-  geradaEm: string;
-  motorista: string;
-  codigo: string;
-  bancada: string;
-  totalMin: number | null;
-  status: 'CONCLUIDA' | 'CANCELADA';
+function ordemHistorico(f: FiltrosHistorico): Prisma.SenhaOrderByWithRelationInput[] {
+  const { coluna, direcao } = f.ordem ?? { coluna: 'geradaEm', direcao: 'desc' };
+  return [{ [CAMPO_DA_COLUNA[coluna]]: direcao }, { geradaEm: 'desc' }, { id: 'desc' }];
 }
 
-const FINALIZADAS = { status: { in: ['CONCLUIDA', 'CANCELADA'] as ('CONCLUIDA' | 'CANCELADA')[] } };
+export interface LinhaHistorico {
+  id: number;
+  geradaEm: string;
+  codigo: string;
+  motorista: string;
+  galpao: string;
+  bancada: string;
+  rota: string;
+  esperaMin: number | null;
+  totalMin: number | null;
+  status: RotuloSenha;
+}
 
-/** RF20 — Histórico de Atendimentos. */
-export async function historicoAtendimentos(deps: Deps, f: FiltrosPeriodo) {
+/** RF20 — Histórico: todas as senhas do período, com KPIs, contagens do filtro e paginação. */
+export async function historico(deps: Deps, f: FiltrosHistorico) {
   const { db, clock } = deps;
+  const agora = clock.agora();
   const cfg = await configuracao(deps);
-  const { dia } = limitesDoDia(clock.agora(), hora(deps));
-  const where = wherePeriodo(f, FINALIZADAS);
+  const { dia } = limitesDoDia(agora, hora(deps));
+  const where = whereHistorico(f);
   const pagina = Math.max(1, f.pagina ?? 1);
-  const [total, totalConcluidos, senhas, concluidas, cancelados, concluidosHoje] =
-    await Promise.all([
-      db.senha.count({ where }),
-      db.senha.count({ where: { ...where, status: 'CONCLUIDA' } }),
-      db.senha.findMany({
-        where,
-        orderBy: [{ geradaEm: 'desc' }, { id: 'desc' }],
-        skip: (pagina - 1) * POR_PAGINA,
-        take: POR_PAGINA,
-      }),
-      db.senha.findMany({
-        where: {
-          status: 'CONCLUIDA',
-          dia: { gte: f.diaInicio, lte: f.diaFim },
-          ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}),
-          concluidaPor: { not: 'SISTEMA' },
-        },
-      }),
-      db.senha.count({
-        where: { status: 'CANCELADA', dia, ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}) },
-      }),
-      db.senha.count({
-        where: { status: 'CONCLUIDA', dia, ...(f.galpaoId ? { galpaoId: f.galpaoId } : {}) },
-      }),
-    ]);
+  const g = doGalpao(f);
+  const [
+    total,
+    concluidas,
+    canceladas,
+    senhas,
+    paraMedia,
+    geradasHoje,
+    concluidasHoje,
+    canceladasHoje,
+  ] = await Promise.all([
+    db.senha.count({ where }),
+    db.senha.count({ where: { AND: [where, { status: 'CONCLUIDA' }] } }),
+    db.senha.count({ where: { AND: [where, { status: 'CANCELADA' }] } }),
+    db.senha.findMany({
+      where,
+      orderBy: ordemHistorico(f),
+      skip: (pagina - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+    }),
+    db.senha.findMany({
+      where: {
+        status: 'CONCLUIDA',
+        dia: { gte: f.diaInicio, lte: f.diaFim },
+        ...g,
+        concluidaPor: { not: 'SISTEMA' },
+      },
+    }),
+    db.senha.count({ where: { dia, ...g } }),
+    db.senha.count({ where: { dia, status: 'CONCLUIDA', ...g } }),
+    db.senha.count({ where: { dia, status: 'CANCELADA', ...g } }),
+  ]);
   // "Tempo médio": mesmas exclusões da média do dia (SISTEMA e carregamento acima do máximo)
-  const totais = concluidas
+  const totais = paraMedia
     .filter((s) => s.chamadaEm && s.concluidaEm)
     .filter(
       (s) => (s.concluidaEm!.getTime() - s.chamadaEm!.getTime()) / 60_000 <= cfg.ocupacaoMaxMin,
@@ -264,86 +302,27 @@ export async function historicoAtendimentos(deps: Deps, f: FiltrosPeriodo) {
 
   return {
     kpis: {
-      concluidosHoje,
-      canceladosHoje: cancelados,
+      geradasHoje,
+      concluidasHoje,
+      canceladasHoje,
       tempoMedioMin: tempoMedio === null ? null : minutos(tempoMedio),
     },
-    total,
     /** RF20-CA6: contagens do filtro inteiro, para o subtítulo */
-    totalConcluidos,
-    totalCancelados: total - totalConcluidos,
-    pagina,
-    paginas: Math.max(1, Math.ceil(total / POR_PAGINA)),
-    linhas: senhas.map((s): LinhaAtendimento => ({
-      id: s.id,
-      geradaEm: s.geradaEm.toISOString(),
-      motorista: s.motoristaNome,
-      codigo: s.codigo,
-      bancada: s.bancadaIdentificacao,
-      totalMin: totalMin(s),
-      status: s.status as 'CONCLUIDA' | 'CANCELADA',
-    })),
-  };
-}
-
-/* ---------------------------------------------------------------- Histórico de Senhas */
-
-export type RotuloSenha = 'Aguardando' | 'Atendendo' | 'Atendida' | 'Cancelada';
-
-function rotulo(s: Senha, agora: Date, carenciaSeg: number): RotuloSenha {
-  const ef = statusEfetivo(s, agora, carenciaSeg).status;
-  if (ef === 'AGUARDANDO') return 'Aguardando';
-  if (ef === 'CHAMADA' || ef === 'EM_ATENDIMENTO') return 'Atendendo';
-  if (ef === 'CONCLUIDA') return 'Atendida';
-  return 'Cancelada';
-}
-
-export interface LinhaSenha {
-  id: number;
-  codigo: string;
-  geradaEm: string;
-  motorista: string;
-  galpao: string;
-  rota: string;
-  status: RotuloSenha;
-}
-
-/** RF21 — Histórico de Senhas. */
-export async function historicoSenhas(deps: Deps, f: FiltrosPeriodo) {
-  const { db, clock } = deps;
-  const agora = clock.agora();
-  const cfg = await configuracao(deps);
-  const { dia } = limitesDoDia(agora, hora(deps));
-  const where = wherePeriodo(f, {});
-  const pagina = Math.max(1, f.pagina ?? 1);
-  const g = f.galpaoId ? { galpaoId: f.galpaoId } : {};
-  const [total, senhas, geradasHoje, atendidasHoje, aguardando, canceladasHoje] = await Promise.all(
-    [
-      db.senha.count({ where }),
-      db.senha.findMany({
-        where,
-        orderBy: [{ geradaEm: 'desc' }, { id: 'desc' }],
-        skip: (pagina - 1) * POR_PAGINA,
-        take: POR_PAGINA,
-      }),
-      db.senha.count({ where: { dia, ...g } }),
-      db.senha.count({ where: { dia, status: 'CONCLUIDA', ...g } }),
-      db.senha.count({ where: { status: 'AGUARDANDO', ...g } }),
-      db.senha.count({ where: { dia, status: 'CANCELADA', ...g } }),
-    ],
-  );
-  return {
-    kpis: { geradasHoje, atendidasHoje, aguardando, canceladasHoje },
     total,
+    totalConcluidas: concluidas,
+    totalCanceladas: canceladas,
     pagina,
     paginas: Math.max(1, Math.ceil(total / POR_PAGINA)),
-    linhas: senhas.map((s): LinhaSenha => ({
+    linhas: senhas.map((s): LinhaHistorico => ({
       id: s.id,
-      codigo: s.codigo,
       geradaEm: s.geradaEm.toISOString(),
+      codigo: s.codigo,
       motorista: s.motoristaNome,
       galpao: s.galpaoNome,
+      bancada: s.bancadaIdentificacao,
       rota: `${s.regiaoCodigo} · ${s.regiaoNome}`,
+      esperaMin: esperaMin(s),
+      totalMin: totalMin(s),
       status: rotulo(s, agora, cfg.carenciaSeg),
     })),
   };
@@ -351,7 +330,7 @@ export async function historicoSenhas(deps: Deps, f: FiltrosPeriodo) {
 
 /* ------------------------------------------------------------------------ CSV (RF22) */
 
-export type TelaExportavel = 'fila-ao-vivo' | 'atendimentos' | 'senhas';
+export type TelaExportavel = 'fila-ao-vivo' | 'historico';
 
 const ROTULO_FILA: Record<StatusFila, string> = {
   AGUARDANDO: 'Aguardando',
@@ -368,11 +347,11 @@ function nomeDoArquivo(tela: TelaExportavel, agora: Date): string {
   return `${tela}_${aaaa}-${mm}-${dd}_${h.replace(':', '')}.csv`;
 }
 
-/** Exporta todas as linhas do filtro atual (todas as páginas), sem CPF (RF22). */
+/** Exporta todas as linhas do filtro atual (todas as páginas, na ordem da tela), sem CPF (RF22). */
 export async function exportarCsv(
   deps: Deps,
   tela: TelaExportavel,
-  filtros: FiltrosFila | FiltrosPeriodo,
+  filtros: FiltrosFila | FiltrosHistorico,
 ): Promise<ResultadoExportacao> {
   const agora = deps.clock.agora();
   const nomeArquivo = nomeDoArquivo(tela, agora);
@@ -395,44 +374,39 @@ export async function exportarCsv(
     };
   }
 
-  const fp = filtros as FiltrosPeriodo;
-  const where = wherePeriodo(fp, tela === 'atendimentos' ? FINALIZADAS : {});
+  const fh = filtros as FiltrosHistorico;
+  const where = whereHistorico(fh);
   if ((await deps.db.senha.count({ where })) > LIMITE_EXPORTACAO) {
     return { ok: false, erro: 'MUITAS_LINHAS' };
   }
-  const senhas = await deps.db.senha.findMany({
-    where,
-    orderBy: [{ geradaEm: 'desc' }, { id: 'desc' }],
-  });
-  if (tela === 'atendimentos') {
-    return {
-      ok: true,
-      nomeArquivo,
-      csv: paraCsv(
-        ['Data/Hora', 'Motorista', 'Senha', 'Bancada', 'Tempo total (min)', 'Status'],
-        senhas.map((s) => [
-          formatarDataHora(s.geradaEm),
-          s.motoristaNome,
-          s.codigo,
-          s.bancadaIdentificacao,
-          totalMin(s),
-          s.status === 'CONCLUIDA' ? 'Concluído' : 'Cancelado',
-        ]),
-      ),
-    };
-  }
-  const cfg = await configuracao(deps);
+  const [senhas, cfg] = await Promise.all([
+    deps.db.senha.findMany({ where, orderBy: ordemHistorico(fh) }),
+    configuracao(deps),
+  ]);
   return {
     ok: true,
     nomeArquivo,
     csv: paraCsv(
-      ['Senha', 'Data/Hora', 'Motorista', 'Galpão', 'Rota', 'Status'],
+      [
+        'Data/Hora',
+        'Senha',
+        'Motorista',
+        'Galpão',
+        'Bancada',
+        'Rota',
+        'Espera (min)',
+        'Tempo total (min)',
+        'Status',
+      ],
       senhas.map((s) => [
-        s.codigo,
         formatarDataHora(s.geradaEm),
+        s.codigo,
         s.motoristaNome,
         s.galpaoNome,
+        s.bancadaIdentificacao,
         `${s.regiaoCodigo} · ${s.regiaoNome}`,
+        esperaMin(s),
+        totalMin(s),
         rotulo(s, agora, cfg.carenciaSeg),
       ]),
     ),

@@ -50,7 +50,7 @@ test('FE-05: os links do painel levam a rotas que existem', async ({ browser }) 
   const admin = await (await contextoAdmin(browser)).newPage();
   await entrarAdmin(admin);
   const links = await conferirLinks(admin, ['/admin']);
-  expect(links.size).toBe(7); // as 7 telas da barra lateral do super-admin
+  expect(links.size).toBe(6); // as 6 telas da barra lateral do super-admin
 });
 
 test('FE-05: rota inexistente mostra a página 404 em português com volta ao início', async ({

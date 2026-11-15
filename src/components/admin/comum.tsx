@@ -147,51 +147,6 @@ export function Kpi({
   );
 }
 
-const CAMPO =
-  't-body-s h-[44px] w-full rounded-md border border-border bg-surface px-md text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none';
-
-/** `Filter Field` do Figma (Search / Date / Select); `busca` põe a lupa dentro do campo. */
-export function CampoFiltro({
-  rotulo,
-  busca = false,
-  children,
-}: {
-  rotulo: string;
-  busca?: boolean;
-  children: (classe: string) => ReactNode;
-}) {
-  return (
-    <label className="flex min-w-0 flex-1 flex-col gap-xs">
-      <span className="t-overline text-text-muted">{rotulo}</span>
-      {busca ? (
-        <span className="relative">
-          <svg
-            aria-hidden
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            className="pointer-events-none absolute left-md top-1/2 -translate-y-1/2 text-text-muted"
-          >
-            <circle cx="7" cy="7" r="4.5" />
-            <path d="m10.5 10.5 3 3" />
-          </svg>
-          {children(`${CAMPO} pl-[36px]`)}
-        </span>
-      ) : (
-        children(CAMPO)
-      )}
-    </label>
-  );
-}
-
-export function BarraDeFiltros({ children }: { children: ReactNode }) {
-  return <div className="mt-xl flex gap-md">{children}</div>;
-}
-
 /**
  * Botão pequeno das ações em linha das tabelas do painel. `perigo` usa a cor danger (desativar);
  * a cor vem por prop porque duas classes text-* juntas não têm ordem garantida.
@@ -215,21 +170,42 @@ export function BotaoDaTabela({
 export interface Coluna {
   titulo: string;
   classe?: string;
+  /** chave de ordenação; sem ela a coluna não ordena (RF31-CA3) */
+  ordenar?: string;
 }
 
-/** Tabela do painel: cabeçalho elevado e linhas zebradas, com estados vazio, carregando e falha. */
+function SetaDeOrdem({ direcao }: { direcao: 'asc' | 'desc' | null }) {
+  return (
+    <svg
+      aria-hidden
+      width="10"
+      height="12"
+      viewBox="0 0 10 12"
+      className={direcao ? 'text-primary' : 'text-text-muted'}
+    >
+      <path d="M5 1 8.5 5h-7z" fill="currentColor" opacity={direcao === 'desc' ? 0.35 : 1} />
+      <path d="M5 11 1.5 7h7z" fill="currentColor" opacity={direcao === 'asc' ? 0.35 : 1} />
+    </svg>
+  );
+}
+
+/** Tabela do painel: cabeçalho elevado, linhas zebradas, estados vazio/carregando/falha e ordenação. */
 export function Tabela({
   colunas,
   vazia,
   children,
   carregando,
   falhou = false,
+  ordem = null,
+  aoOrdenar,
 }: {
   colunas: Coluna[];
   vazia: string;
   carregando: boolean;
   /** a primeira carga falhou: não há dados para mostrar */
   falhou?: boolean;
+  ordem?: { coluna: string; direcao: 'asc' | 'desc' } | null;
+  aoOrdenar?: (coluna: string) => void;
   children: ReactNode[];
 }) {
   return (
@@ -237,14 +213,33 @@ export function Tabela({
       <table className="w-full border-collapse text-left">
         <thead className="bg-elevated">
           <tr>
-            {colunas.map((c) => (
-              <th
-                key={c.titulo}
-                className={`t-overline px-base py-md text-text-secondary ${c.classe ?? ''}`}
-              >
-                {c.titulo}
-              </th>
-            ))}
+            {colunas.map((c) => {
+              const ativa = c.ordenar && ordem?.coluna === c.ordenar ? ordem.direcao : null;
+              return (
+                <th
+                  key={c.titulo || 'acoes'}
+                  aria-sort={
+                    ativa === 'asc' ? 'ascending' : ativa === 'desc' ? 'descending' : undefined
+                  }
+                  className={`t-overline px-base py-md text-text-secondary ${c.classe ?? ''}`}
+                >
+                  {c.ordenar && aoOrdenar ? (
+                    <button
+                      type="button"
+                      onClick={() => aoOrdenar(c.ordenar!)}
+                      className="t-overline -mx-xs inline-flex items-center gap-xs rounded-sm px-xs uppercase hover:text-text-primary"
+                    >
+                      {c.titulo}
+                      <SetaDeOrdem direcao={ativa} />
+                    </button>
+                  ) : c.titulo ? (
+                    c.titulo
+                  ) : (
+                    <span className="sr-only">Ações</span>
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody className="[&>tr:nth-child(even)]:bg-surface [&>tr:nth-child(odd)]:bg-bg">

@@ -198,18 +198,24 @@ export async function contextoAdmin(browser: Browser, largura = 1440) {
 }
 
 export async function entrarMotorista(page: Page, documento: string, senha = SENHA_MOTORISTA) {
-  await page.goto('/login');
+  // espera o JS da tela carregar: um clique antes da hidratação se perde (next dev compila sob demanda)
+  await page.goto('/login', { waitUntil: 'networkidle' });
   await page.getByLabel('CPF').fill(documento);
   await page.getByLabel('Senha').fill(senha);
   await page.getByRole('button', { name: 'Entrar' }).click();
+  // o primeiro login da rodada compila a server action e verifica o hash (argon2): pode demorar
+  await page.waitForURL((u) => u.pathname !== '/login', { timeout: 30_000 });
 }
 
 export async function entrarAdmin(page: Page, documento = CPF.superAdmin, senha = SENHA_ADMIN) {
-  await page.goto('/admin/login');
+  // espera o JS da tela carregar: um clique antes da hidratação se perde (next dev compila sob demanda)
+  await page.goto('/admin/login', { waitUntil: 'networkidle' });
   await page.getByLabel('CPF').fill(documento);
   await page.getByLabel('Senha').fill(senha);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('heading', { name: 'Fila ao Vivo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fila ao Vivo' })).toBeVisible({
+    timeout: 30_000,
+  });
 }
 
 /** Gera a senha pela tela (o GPS do contexto está no pátio). */

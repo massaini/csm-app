@@ -11,8 +11,9 @@ export default defineConfig({
   // um banco compartilhado: um teste por vez
   fullyParallel: false,
   workers: 1,
-  timeout: 60_000,
-  expect: { timeout: 8_000 },
+  timeout: 120_000,
+  // o next dev compila cada tela na primeira visita; prazos de produto (ex.: 5 s do RNF01) são explícitos
+  expect: { timeout: 15_000 },
   retries: 0,
   reporter: [['list']],
   globalSetup: './e2e/global-setup.ts',

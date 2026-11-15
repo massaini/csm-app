@@ -2,10 +2,17 @@
 
 import { useState } from 'react';
 import {
-  BarraDeFiltros,
+  BarraDeBusca,
+  estadoInicial,
+  ordenarLocal,
+  proximaOrdem,
+  type Campo,
+  type EstadoBusca,
+  type Ordem,
+} from '@/components/admin/busca';
+import {
   BotaoExportar,
   CabecalhoDaTela,
-  CampoFiltro,
   FALHA_AO_ENVIAR,
   Kpi,
   LinhaDeKpis,
@@ -65,14 +72,31 @@ type Pendente =
   { tipo: 'fora-de-ordem'; linha: LinhaFila } | { tipo: 'concluir'; linha: LinhaFila } | null;
 
 /** Tela `170:26` — Fila ao Vivo (RF17, RF18, RF19). */
+const STATUS_FILA = ['AGUARDANDO', 'CHAMADA', 'EM_ATENDIMENTO'] as const;
+
+/** Ordenação pelas colunas (RF31-CA3); sem escolha, vale a ordem do servidor (RF17-CA6). */
+const VALOR_DA_COLUNA: Record<string, (l: LinhaFila) => string | number | null> = {
+  codigo: (l) => l.codigo,
+  motorista: (l) => l.motorista,
+  galpao: (l) => l.galpao,
+  status: (l) => CHIP[l.status].texto,
+  bancada: (l) => `${l.bancada.padStart(4, '0')}-${String(l.posicao ?? 0).padStart(4, '0')}`,
+  tempo: (l) => l.tempoMin,
+};
+
 export function FilaAoVivo() {
-  const [motorista, setMotorista] = useState('');
-  const [codigo, setCodigo] = useState('');
-  const [galpaoId, setGalpaoId] = useState<number | null>(null);
-  const [bancadaId, setBancadaId] = useState<number | null>(null);
+  const [busca, setBusca] = useState<EstadoBusca>(estadoInicial());
+  const [ordem, setOrdem] = useState<Ordem | null>(null);
+  const numeros = (chave: string) => (busca.selecoes[chave] ?? []).map(Number);
   const consulta: Consulta = {
     tela: 'fila-ao-vivo',
-    filtros: { motorista, codigo, galpaoId, bancadaId },
+    filtros: {
+      texto: busca.texto,
+      campo: busca.campoTexto as 'nome' | 'codigo',
+      galpaoIds: numeros('galpao'),
+      bancadaIds: numeros('bancada'),
+      status: (busca.selecoes.status ?? []) as (typeof STATUS_FILA)[number][],
+    },
   };
   const { dados, erro, recarregar } = useConsulta<Dados>(consulta, POLLING_MS);
   const [pendente, setPendente] = useState<Pendente>(null);
@@ -101,7 +125,34 @@ export function FilaAoVivo() {
     else void executar(() => acaoChamar(l.id));
   }
 
-  const bancadas = dados?.galpoes.find((g) => g.id === galpaoId)?.bancadas ?? [];
+  const campos: Campo[] = [
+    { chave: 'nome', rotulo: 'Nome', tipo: 'texto' },
+    { chave: 'codigo', rotulo: 'Nº da senha', tipo: 'texto' },
+    {
+      chave: 'galpao',
+      rotulo: 'Galpão',
+      tipo: 'opcoes',
+      opcoes: (dados?.galpoes ?? []).map((g) => ({ valor: String(g.id), rotulo: g.nome })),
+    },
+    {
+      chave: 'bancada',
+      rotulo: 'Bancada',
+      tipo: 'opcoes',
+      opcoes: (dados?.galpoes ?? []).flatMap((g) =>
+        g.bancadas.map((b) => ({
+          valor: String(b.id),
+          rotulo: `${g.nome} · Bancada ${b.identificacao}`,
+        })),
+      ),
+    },
+    {
+      chave: 'status',
+      rotulo: 'Status',
+      tipo: 'opcoes',
+      opcoes: STATUS_FILA.map((s) => ({ valor: s, rotulo: CHIP[s].texto })),
+    },
+  ];
+  const linhas = ordenarLocal(dados?.linhas ?? [], ordem, VALOR_DA_COLUNA);
 
   return (
     <main>
@@ -122,64 +173,7 @@ export function FilaAoVivo() {
         />
       </LinhaDeKpis>
 
-      <BarraDeFiltros>
-        <CampoFiltro rotulo="Motorista" busca>
-          {(c) => (
-            <input
-              className={c}
-              placeholder="Buscar nome ou CPF"
-              value={motorista}
-              onChange={(e) => setMotorista(e.target.value)}
-            />
-          )}
-        </CampoFiltro>
-        <CampoFiltro rotulo="Nº da senha" busca>
-          {(c) => (
-            <input
-              className={c}
-              placeholder="Buscar nº da senha"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-            />
-          )}
-        </CampoFiltro>
-        <CampoFiltro rotulo="Galpão">
-          {(c) => (
-            <select
-              className={c}
-              value={galpaoId ?? ''}
-              onChange={(e) => {
-                setGalpaoId(e.target.value ? Number(e.target.value) : null);
-                setBancadaId(null);
-              }}
-            >
-              <option value="">Todos os galpões</option>
-              {dados?.galpoes.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nome}
-                </option>
-              ))}
-            </select>
-          )}
-        </CampoFiltro>
-        <CampoFiltro rotulo="Bancada">
-          {(c) => (
-            <select
-              className={c}
-              disabled={!galpaoId}
-              value={bancadaId ?? ''}
-              onChange={(e) => setBancadaId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">{galpaoId ? 'Todas as bancadas' : 'Escolha um galpão'}</option>
-              {bancadas.map((b) => (
-                <option key={b.id} value={b.id}>
-                  Bancada {b.identificacao}
-                </option>
-              ))}
-            </select>
-          )}
-        </CampoFiltro>
-      </BarraDeFiltros>
+      <BarraDeBusca campos={campos} estado={busca} aoMudar={setBusca} />
 
       {aviso || erro ? (
         <MensagemDeErro className="mt-base">
@@ -191,17 +185,19 @@ export function FilaAoVivo() {
         carregando={!dados}
         falhou={erro && !dados}
         vazia="Nenhum motorista na fila agora"
+        ordem={ordem}
+        aoOrdenar={(c) => setOrdem(proximaOrdem(ordem, c))}
         colunas={[
-          { titulo: 'Senha' },
-          { titulo: 'Motorista' },
-          { titulo: 'Galpão' },
-          { titulo: 'Status' },
-          { titulo: 'Posição/Bancada' },
-          { titulo: 'Tempo', classe: 'text-right' },
+          { titulo: 'Senha', ordenar: 'codigo' },
+          { titulo: 'Motorista', ordenar: 'motorista' },
+          { titulo: 'Galpão', ordenar: 'galpao' },
+          { titulo: 'Status', ordenar: 'status' },
+          { titulo: 'Posição/Bancada', ordenar: 'bancada' },
+          { titulo: 'Tempo', classe: 'text-right', ordenar: 'tempo' },
           { titulo: 'Status de chamado', classe: 'w-[260px]' },
         ]}
       >
-        {(dados?.linhas ?? []).map((l) => (
+        {linhas.map((l) => (
           <tr key={l.id} className="t-body-m">
             <td className="t-body-m-strong px-base py-md text-primary">
               {l.codigo}

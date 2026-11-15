@@ -7,7 +7,6 @@ import { Logo } from '@/components/ui/logo';
 type Icone =
   | 'fila'
   | 'atendimentos'
-  | 'senhas'
   | 'motoristas'
   | 'bancadas'
   | 'configuracoes'
@@ -39,13 +38,6 @@ function IconeDoItem({ icone }: { icone: Icone }) {
       return (
         <svg {...comum}>
           <path d="M2 4h12M2 8h12M2 12h12" />
-        </svg>
-      );
-    case 'senhas':
-      return (
-        <svg {...comum}>
-          <rect x="1.5" y="4" width="13" height="8" rx="1.5" />
-          <path d="M8 4v8" />
         </svg>
       );
     case 'motoristas':
@@ -104,8 +96,7 @@ interface Item {
 
 const ITENS: Item[] = [
   { href: '/admin', rotulo: 'Fila ao Vivo', icone: 'fila' },
-  { href: '/admin/atendimentos', rotulo: 'Histórico de Atendimentos', icone: 'atendimentos' },
-  { href: '/admin/senhas', rotulo: 'Histórico de Senhas', icone: 'senhas' },
+  { href: '/admin/historico', rotulo: 'Histórico', icone: 'atendimentos' },
   { href: '/admin/motoristas', rotulo: 'Motoristas', icone: 'motoristas' },
   { href: '/admin/bancadas-regioes', rotulo: 'Bancadas e Regiões', icone: 'bancadas' },
   { href: '/admin/configuracoes', rotulo: 'Configurações', icone: 'configuracoes' },

@@ -1,18 +1,23 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState, type FormEvent } from 'react';
 import {
-  BotaoDaTabela,
-  CabecalhoDaTela,
-  CampoFiltro,
-  FALHA_AO_ENVIAR,
-  Tabela,
-  tentar,
-} from '@/components/admin/comum';
+  BarraDeBusca,
+  estadoInicial,
+  filtrarLocal,
+  ordenarLocal,
+  proximaOrdem,
+  type Campo,
+  type EstadoBusca,
+  type Ordem,
+} from '@/components/admin/busca';
+import { CabecalhoDaTela, FALHA_AO_ENVIAR, Tabela, tentar } from '@/components/admin/comum';
 import { Chip, MensagemDeErro } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Confirmacao } from '@/components/ui/confirmacao';
 import { Dialogo, SenhaTemporaria } from '@/components/ui/dialogo';
+import { ItemDoMenu, Menu, SeparadorDoMenu } from '@/components/ui/menu';
 import { Field } from '@/components/ui/field';
 import { formatarCpf, formatarTelefone } from '@/domain/documentos';
 import type { MotoristaListado } from '@/server/cadastros';
@@ -28,6 +33,16 @@ type Regiao = { id: number; codigo: string; nome: string };
 
 type Pendente = { tipo: 'desativar' | 'redefinir' | 'liberar'; m: MotoristaListado } | null;
 
+const SITUACOES = ['Ativo', 'Inativo', 'Troca pendente', 'Liberado'] as const;
+
+function situacoes(m: MotoristaListado): string[] {
+  return [
+    m.ativo ? 'Ativo' : 'Inativo',
+    ...(m.ativo && m.deveTrocarSenha ? ['Troca pendente'] : []),
+    ...(m.liberado ? ['Liberado'] : []),
+  ];
+}
+
 /** RF24 — cadastro de motoristas (tela nova, montada com o DS). */
 export function Motoristas({
   inicial,
@@ -36,8 +51,10 @@ export function Motoristas({
   inicial: MotoristaListado[];
   regioes: Regiao[];
 }) {
+  const router = useRouter();
   const [lista, setLista] = useState(inicial);
-  const [busca, setBusca] = useState('');
+  const [busca, setBusca] = useState<EstadoBusca>(estadoInicial());
+  const [ordem, setOrdem] = useState<Ordem | null>({ coluna: 'nome', direcao: 'asc' });
   const [editando, setEditando] = useState<MotoristaListado | 'novo' | null>(null);
   const [senha, setSenha] = useState<{ para: string; senha: string } | null>(null);
   const [pendente, setPendente] = useState<Pendente>(null);
@@ -45,21 +62,47 @@ export function Motoristas({
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
-  async function recarregar(termo = busca) {
-    const r = await tentar(() => buscarMotoristas(termo));
+  // a lista inteira fica no cliente; busca e filtros não geram requisição nem entram na URL
+  async function recarregar() {
+    const r = await tentar(() => buscarMotoristas(''));
     if (r) setLista(r);
     setErro(r ? null : FALHA_AO_ENVIAR);
   }
 
-  // busca com atraso curto; o termo vai por POST, nunca na URL (RF24-CA7)
-  useEffect(() => {
-    const id = setTimeout(async () => {
-      const r = await tentar(() => buscarMotoristas(busca));
-      if (r) setLista(r);
-      setErro(r ? null : FALHA_AO_ENVIAR);
-    }, 300);
-    return () => clearTimeout(id);
-  }, [busca]);
+  const campos: Campo[] = [
+    { chave: 'nome', rotulo: 'Nome', tipo: 'texto' },
+    { chave: 'cpf', rotulo: 'CPF', tipo: 'texto' },
+    { chave: 'telefone', rotulo: 'Telefone', tipo: 'texto' },
+    {
+      chave: 'regiao',
+      rotulo: 'Região',
+      tipo: 'opcoes',
+      opcoes: regioes.map((r) => ({ valor: String(r.id), rotulo: `${r.codigo} · ${r.nome}` })),
+    },
+    {
+      chave: 'situacao',
+      rotulo: 'Situação',
+      tipo: 'opcoes',
+      opcoes: SITUACOES.map((s) => ({ valor: s, rotulo: s })),
+    },
+  ];
+  const visiveis = ordenarLocal(
+    filtrarLocal(lista, busca, {
+      nome: (m) => m.nome,
+      cpf: (m) => m.cpf,
+      telefone: (m) => m.telefone ?? '',
+      regiao: (m) => String(m.regiaoId),
+      situacao: situacoes,
+    }),
+    ordem,
+    {
+      nome: (m) => m.nome,
+      cpf: (m) => m.cpf,
+      telefone: (m) => m.telefone ?? null,
+      regiao: (m) => m.regiao,
+      situacao: (m) => situacoes(m).join(' '),
+    },
+  );
 
   async function confirmar() {
     if (!pendente) return;
@@ -94,7 +137,11 @@ export function Motoristas({
     <main>
       <CabecalhoDaTela
         titulo="Motoristas"
-        subtitulo={`${lista.length} ${lista.length === 1 ? 'motorista' : 'motoristas'}${busca ? ' encontrados' : ''}`}
+        subtitulo={
+          visiveis.length === lista.length
+            ? `${lista.length} ${lista.length === 1 ? 'motorista' : 'motoristas'}`
+            : `${visiveis.length} de ${lista.length} motoristas`
+        }
         acao={
           <Button bloco={false} className="w-[228px]" onClick={() => setEditando('novo')}>
             + Novo motorista
@@ -102,18 +149,7 @@ export function Motoristas({
         }
       />
 
-      <div className="mt-xl max-w-[420px]">
-        <CampoFiltro rotulo="Buscar" busca>
-          {(classe) => (
-            <input
-              className={classe}
-              placeholder="Nome ou CPF"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-          )}
-        </CampoFiltro>
-      </div>
+      <BarraDeBusca campos={campos} estado={busca} aoMudar={setBusca} />
 
       {aviso ? (
         <p role="status" className="t-body-s mt-base text-success">
@@ -125,16 +161,18 @@ export function Motoristas({
       <Tabela
         carregando={false}
         vazia="Nenhum motorista encontrado"
+        ordem={ordem}
+        aoOrdenar={(c) => setOrdem(proximaOrdem(ordem, c))}
         colunas={[
-          { titulo: 'Nome' },
-          { titulo: 'CPF' },
-          { titulo: 'Telefone' },
-          { titulo: 'Região' },
-          { titulo: 'Situação' },
-          { titulo: 'Ações', classe: 'w-[360px]' },
+          { titulo: 'Nome', ordenar: 'nome' },
+          { titulo: 'CPF', ordenar: 'cpf' },
+          { titulo: 'Telefone', ordenar: 'telefone' },
+          { titulo: 'Região', ordenar: 'regiao' },
+          { titulo: 'Situação', ordenar: 'situacao' },
+          { titulo: '', classe: 'w-[64px]' },
         ]}
       >
-        {lista.map((m) => (
+        {visiveis.map((m) => (
           <tr key={m.id} className="t-body-m">
             <td className="t-body-m-strong whitespace-nowrap px-base py-md">{m.nome}</td>
             <td className="t-body-s whitespace-nowrap px-base py-md tabular-nums text-text-secondary">
@@ -151,29 +189,77 @@ export function Motoristas({
                 {m.liberado ? <Chip tom="primary">Liberado</Chip> : null}
               </div>
             </td>
-            <td className="px-base py-md">
-              {/* duas colunas alinhadas, com respiro entre os botões */}
-              <div className="grid grid-cols-[repeat(2,max-content)] gap-sm">
-                <BotaoDaTabela onClick={() => setEditando(m)}>Editar</BotaoDaTabela>
-                {m.ativo ? (
+            <td className="px-base py-md text-right">
+              {/* RF24-CA8: ações no menu "⋮" */}
+              <Menu
+                rotulo={`Ações de ${m.nome}`}
+                classeDoBotao="t-title-s inline-flex h-[36px] w-[36px] items-center justify-center rounded-md text-text-secondary hover:bg-elevated hover:text-text-primary aria-expanded:bg-elevated"
+                conteudoDoBotao={<span aria-hidden>⋮</span>}
+              >
+                {(fechar) => (
                   <>
-                    <BotaoDaTabela onClick={() => setPendente({ tipo: 'redefinir', m })}>
-                      Redefinir senha
-                    </BotaoDaTabela>
-                    <BotaoDaTabela
-                      disabled={m.liberado}
-                      onClick={() => setPendente({ tipo: 'liberar', m })}
+                    <ItemDoMenu
+                      aoEscolher={() => {
+                        fechar();
+                        setEditando(m);
+                      }}
                     >
-                      Liberar geração de senha
-                    </BotaoDaTabela>
-                    <BotaoDaTabela perigo onClick={() => setPendente({ tipo: 'desativar', m })}>
-                      Desativar
-                    </BotaoDaTabela>
+                      Editar
+                    </ItemDoMenu>
+                    <ItemDoMenu
+                      aoEscolher={() => {
+                        fechar();
+                        router.push(`/admin/historico?motorista=${m.id}`);
+                      }}
+                    >
+                      Ver histórico
+                    </ItemDoMenu>
+                    {m.ativo ? (
+                      <>
+                        <ItemDoMenu
+                          aoEscolher={() => {
+                            fechar();
+                            setPendente({ tipo: 'redefinir', m });
+                          }}
+                        >
+                          Redefinir senha
+                        </ItemDoMenu>
+                        <ItemDoMenu
+                          desabilitado={m.liberado}
+                          aoEscolher={() => {
+                            fechar();
+                            setPendente({ tipo: 'liberar', m });
+                          }}
+                        >
+                          {m.liberado ? 'Geração de senha liberada' : 'Liberar geração de senha'}
+                        </ItemDoMenu>
+                        <SeparadorDoMenu />
+                        <ItemDoMenu
+                          perigo
+                          aoEscolher={() => {
+                            fechar();
+                            setPendente({ tipo: 'desativar', m });
+                          }}
+                        >
+                          Desativar
+                        </ItemDoMenu>
+                      </>
+                    ) : (
+                      <>
+                        <SeparadorDoMenu />
+                        <ItemDoMenu
+                          aoEscolher={() => {
+                            fechar();
+                            void reativar(m);
+                          }}
+                        >
+                          Reativar
+                        </ItemDoMenu>
+                      </>
+                    )}
                   </>
-                ) : (
-                  <BotaoDaTabela onClick={() => void reativar(m)}>Reativar</BotaoDaTabela>
                 )}
-              </div>
+              </Menu>
             </td>
           </tr>
         ))}

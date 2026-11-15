@@ -126,8 +126,7 @@ test('FE-03: telas do painel sem violações WCAG A/AA', async ({ browser }) => 
   await expect(admin.getByRole('row').filter({ hasText: 'A-001' })).toBeVisible();
   await auditar(admin, '/admin');
   for (const rota of [
-    '/admin/atendimentos',
-    '/admin/senhas',
+    '/admin/historico',
     '/admin/motoristas',
     '/admin/bancadas-regioes',
     '/admin/configuracoes',
@@ -139,6 +138,16 @@ test('FE-03: telas do painel sem violações WCAG A/AA', async ({ browser }) => 
   }
 
   await admin.goto('/admin/motoristas');
+  await admin.getByRole('button', { name: 'Ações de João da Silva' }).click();
+  await expect(admin.getByRole('menu')).toBeVisible();
+  await auditar(admin, '/admin/motoristas (menu de ações aberto)');
+  await admin.keyboard.press('Escape');
+  await admin.getByRole('button', { name: 'Filtrar por' }).click();
+  await admin.getByRole('menuitem', { name: 'Situação' }).click();
+  await expect(admin.getByRole('menuitemcheckbox').first()).toBeVisible();
+  await auditar(admin, '/admin/motoristas (subfiltro aberto)');
+  await admin.keyboard.press('Escape');
+
   await admin.getByRole('button', { name: '+ Novo motorista' }).click();
   await expect(admin.getByRole('dialog')).toBeVisible();
   await auditar(admin, '/admin/motoristas (novo motorista)');
@@ -159,7 +168,7 @@ async function focado(page: Page) {
 
 test('FE-03: o motorista entra só com o teclado e o foco fica visível', async ({ browser }) => {
   const page = await (await contextoMotorista(browser)).newPage();
-  await page.goto('/login');
+  await page.goto('/login', { waitUntil: 'networkidle' });
   // primeiro Tab cai no CPF; o campo focado troca a borda para a cor primária
   await page.keyboard.press('Tab');
   expect((await focado(page)).tag).toBe('input');

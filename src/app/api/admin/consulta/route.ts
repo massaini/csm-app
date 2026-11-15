@@ -3,7 +3,7 @@ import { relogioApp } from '@/server/relogio';
 import { db } from '@/server/db';
 import { esquemaConsulta } from '@/server/filtros-admin';
 import { usuarioAtual } from '@/server/http-sessao';
-import { filaAoVivo, historicoAtendimentos, historicoSenhas } from '@/server/painel';
+import { filaAoVivo, historico } from '@/server/painel';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +19,6 @@ export async function POST(req: Request) {
   const deps = { db, clock: relogioApp };
   const { tela, filtros } = consulta.data;
   const dados =
-    tela === 'fila-ao-vivo'
-      ? await filaAoVivo(deps, filtros)
-      : tela === 'atendimentos'
-        ? await historicoAtendimentos(deps, filtros)
-        : await historicoSenhas(deps, filtros);
+    tela === 'fila-ao-vivo' ? await filaAoVivo(deps, filtros) : await historico(deps, filtros);
   return NextResponse.json(dados, { headers: { 'Cache-Control': 'no-store' } });
 }

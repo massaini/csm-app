@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.5 — bancada atende um motorista por vez (P25) e volume de 180 motoristas (P26) |
-| Data | 2026-11-10 |
+| Versão | 0.6 — Histórico unificado (P28), busca e filtros das listagens (RF31) |
+| Data | 2026-11-14 |
 | Escopo | MVP: Fila (app do motorista + painel admin) |
 | Fonte de UI | Figma `TSxGXyq7qLD3K4aCGtfjZD` (protótipo validado pelo cliente) |
 | Status | Aguardando aprovação final |
@@ -64,7 +64,7 @@ Motorista:
 
 Administrador:
 8. Fila ao Vivo: chamar, confirmar chegada e concluir.
-9. Histórico de Atendimentos e Histórico de Senhas.
+9. Histórico (senhas e atendimentos numa tela só, P28).
 10. Cadastro de motoristas (redefinir senha, liberar geofence, desativar).
 11. Bancadas, regiões e mapeamento região → bancada por galpão (tela simples).
 12. Configurações operacionais.
@@ -73,7 +73,7 @@ Administrador:
 ### 5.2 Funcionalidades Secundárias (MVP, não bloqueiam o fluxo principal)
 
 - Exportar CSV nas 3 telas do admin.
-- Filtros do admin (RF17, RF20, RF21).
+- Busca, filtros e ordenação das listagens do admin (RF31).
 - Página de instruções de instalação do PWA.
 
 ### 5.3 Fora de Escopo (este ciclo)
@@ -173,13 +173,13 @@ Motorista desativado: senha ativa → CANCELADA (MOTORISTA_DESATIVADO).
 
 **Rótulos na UI**
 
-| Status | Motorista | Fila ao Vivo | Histórico de Senhas | Histórico de Atendimentos |
-|---|---|---|---|---|
-| AGUARDANDO | "Aguardando na fila" | Aguardando | Aguardando | — |
-| CHAMADA | "Você foi chamado" | Chamado | Atendendo | — |
-| EM_ATENDIMENTO | "Em atendimento" | Em atendimento | Atendendo | — |
-| CONCLUIDA | "Concluído" | — | Atendida | Concluído |
-| CANCELADA | "Cancelada" | — | Cancelada | Cancelado |
+| Status | Motorista | Fila ao Vivo | Histórico |
+|---|---|---|---|
+| AGUARDANDO | "Aguardando na fila" | Aguardando | Aguardando |
+| CHAMADA | "Você foi chamado" | Chamado | Atendendo |
+| EM_ATENDIMENTO | "Em atendimento" | Em atendimento | Atendendo |
+| CONCLUIDA | "Concluído" | — | Concluída |
+| CANCELADA | "Cancelada" | — | Cancelada |
 
 **Fórmulas**
 
@@ -208,19 +208,19 @@ Arredondamento:
 
 "Hoje" = senhas com `dia` = dia operacional atual. Filtros que afetam os KPIs:
 - Fila ao Vivo: galpão e bancada.
-- Históricos, KPIs "de hoje" e "agora": só galpão.
-- Histórico de Atendimentos, "Tempo médio": período e galpão.
-- Os filtros de motorista e nº da senha nunca afetam KPIs.
+- Histórico, KPIs "de hoje": só galpão.
+- Histórico, "Tempo médio": período e galpão.
+- Busca por texto (nome, CPF, nº da senha) e os demais filtros nunca afetam KPIs.
 
 | Tela | KPI | Definição |
 |---|---|---|
 | Fila ao Vivo | Aguardando | qtde `AGUARDANDO` agora |
 | Fila ao Vivo | Em atendimento | qtde `CHAMADA` + `EM_ATENDIMENTO` agora |
 | Fila ao Vivo | Tempo médio na fila | média do tempo de espera das senhas de hoje que já têm `chamadaEm` (inclui as que expiraram depois) |
-| Hist. Atendimentos | Concluídos hoje | qtde `CONCLUIDA` de hoje |
-| Hist. Atendimentos | Cancelados hoje | qtde `CANCELADA` de hoje (todos os motivos) |
-| Hist. Atendimentos | Tempo médio | média do tempo total das `CONCLUIDA` no período filtrado, com as mesmas exclusões da Média do dia (`SISTEMA` e carregamento > `ocupacaoMaxMin`) |
-| Hist. Senhas | Geradas hoje / Atendidas / Aguardando / Canceladas | qtde de hoje / `CONCLUIDA` de hoje / `AGUARDANDO` agora / `CANCELADA` de hoje |
+| Histórico | Geradas hoje | qtde de senhas de hoje |
+| Histórico | Concluídas hoje | qtde `CONCLUIDA` de hoje |
+| Histórico | Canceladas hoje | qtde `CANCELADA` de hoje (todos os motivos) |
+| Histórico | Tempo médio | média do tempo total das `CONCLUIDA` no período filtrado, com as mesmas exclusões da Média do dia (`SISTEMA` e carregamento > `ocupacaoMaxMin`) |
 
 ### 6.1 Requisitos Funcionais
 
@@ -379,8 +379,8 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
   - AGUARDANDO: botão "Chamar"; fica desabilitado, com o texto "Bancada ocupada", enquanto a bancada tiver outra senha `CHAMADA` ou `EM_ATENDIMENTO`;
   - CHAMADA: a contagem regressiva até `prazoEm` + o botão "Confirmar chegada";
   - EM_ATENDIMENTO: o botão "Concluir".
-- **RF17-CA6**: ordenação por galpão → bancada → status (EM_ATENDIMENTO, CHAMADA, AGUARDANDO) → posição.
-- **RF17-CA7**: filtros: motorista (nome ou CPF), nº da senha, galpão e bancada (dependente do galpão).
+- **RF17-CA6**: ordenação padrão por galpão → bancada → status (EM_ATENDIMENTO, CHAMADA, AGUARDANDO) → posição; as colunas de dados podem ser reordenadas (RF31-CA3).
+- **RF17-CA7**: busca e filtros no padrão do RF31: texto por Nome (padrão) ou Nº da senha; opções de Galpão, Bancada e Status.
 - **RF17-CA8**: mudanças de qualquer usuário aparecem sem recarregar, em até 5 s.
 - **RF17-CA9**: sem senhas ativas, a tela mostra "Nenhum motorista na fila agora".
 - **RF17-CA10**: o subtítulo é "Estado em tempo real · <dia da semana>, <data por extenso> — <hh:mm>", com o relógio do servidor.
@@ -402,27 +402,22 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RF19-CA2**: "Concluir" numa senha EM_ATENDIMENTO pede confirmação e grava `CONCLUIDA (ADMIN)`.
 - **RF19-CA3**: as duas ações gravam auditoria e respondem 409 se o status já mudou.
 
-**RF20 — Histórico de Atendimentos** [`171:95`]
-- **RF20-CA1**: lista senhas `CONCLUIDA` e `CANCELADA` com as colunas:
-  - Data/Hora (`geradaEm`), Motorista, Senha e Bancada;
-  - Tempo total (ou "—") e Status.
+**RF20 — Histórico** [`171:95` e `172:170` unificados, P28]
+- **RF20-CA1**: lista as senhas do período em todos os status, com as colunas Data/Hora (`geradaEm`), Senha, Motorista, Galpão, Bancada, Rota, Espera, Tempo total e Status (rótulos da 6.0). Espera e Tempo total mostram "—" quando não se aplicam (sem chamada, cancelada ou `SISTEMA`).
 - **RF20-CA2**: KPIs conforme a 6.0.
-- **RF20-CA3**: período padrão = últimos 7 dias operacionais (inclusive hoje), com filtro de `dia` inclusivo nos dois extremos. Também filtra por motorista, nº da senha e galpão.
-- **RF20-CA4**: paginação de 50 linhas, da mais recente para a mais antiga.
-- **RF20-CA5**: sem resultado, mostra "Nenhum atendimento no período".
-- **RF20-CA6**: o subtítulo é "<período> · N atendimentos concluídos · M cancelados", com as contagens do filtro atual.
+- **RF20-CA3**: período padrão = últimos 7 dias operacionais (inclusive hoje), com filtro de `dia` inclusivo nos dois extremos. O filtro de Período oferece Hoje, Últimos 7 dias, Quinzena atual e um intervalo personalizado. Busca e filtros no padrão do RF31: texto por Nome (padrão) ou Nº da senha; opções de Período, Galpão, Bancada, Rota e Status.
+- **RF20-CA4**: paginação de 50 linhas; ordem padrão da mais recente para a mais antiga; Data/Hora, Senha, Motorista, Galpão, Bancada, Rota e Status podem ser ordenados (no servidor, antes da paginação).
+- **RF20-CA5**: sem resultado, mostra "Nenhuma senha no período".
+- **RF20-CA6**: o subtítulo é "<período> · N senhas · X concluídas · Y canceladas", com as contagens do filtro atual.
+- **RF20-CA7**: "Ver histórico", no menu do motorista (RF24-CA8), abre o Histórico filtrado por ele. A URL leva só o id interno do motorista, nunca o CPF.
+- As rotas antigas `/admin/atendimentos` e `/admin/senhas` redirecionam para `/admin/historico`.
 
-**RF21 — Histórico de Senhas** [`172:170`]
-- **RF21-CA1**: colunas Senha, Data/Hora, Motorista, Galpão, Rota e Status, com os rótulos da 6.0.
-- **RF21-CA2**: KPIs conforme a 6.0.
-- **RF21-CA3**: período padrão = quinzena atual (dias 1–15 ou 16–último dia), com a mesma barra de filtros do RF20 (P18).
-- **RF21-CA4**: paginação de 50 linhas e estado vazio "Nenhuma senha no período".
-- **RF21-CA5**: o subtítulo é "<período> · N senhas geradas", com a contagem do filtro atual.
+**RF21 — Histórico de Senhas**: incorporado ao RF20 (P28).
 
 **RF22 — Exportar CSV** [`216:470`]
 - **RF22-CA1**: "Exportar" abre o modal do Figma ("Exportar?" / "Isso vai baixar os dados desta tabela para o seu computador." / "Sim, exportar" / "Cancelar").
 - **RF22-CA2**: o CSV tem as mesmas colunas de dados da tabela (sem a coluna de botões "Status de chamado") e todas as linhas do filtro atual (todas as páginas), até 10.000 linhas. Acima disso, mostra "Refine o período para exportar".
-- **RF22-CA3**: o arquivo sai em UTF-8 com BOM, separador `;`, datas `dd/mm/aaaa hh:mm` e nome `<tela>_AAAA-MM-DD_HHmm.csv`, com `<tela>` = `fila-ao-vivo`, `atendimentos` ou `senhas`. Com 0 linhas, sai só o cabeçalho.
+- **RF22-CA3**: o arquivo sai em UTF-8 com BOM, separador `;`, datas `dd/mm/aaaa hh:mm` e nome `<tela>_AAAA-MM-DD_HHmm.csv`, com `<tela>` = `fila-ao-vivo` ou `historico`. Com 0 linhas, sai só o cabeçalho.
 - **RF22-CA4**: células que começam com `=`, `+`, `-` ou `@` recebem o prefixo `'`.
 - **RF22-CA5**: o CPF não sai no CSV, e a requisição de exportação é POST (os filtros vão no corpo).
 
@@ -440,7 +435,8 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RF24-CA4**: desativar e reativar seguem o RF06. Não existe exclusão.
 - **RF24-CA5**: "Redefinir senha" gera uma nova senha temporária, conforme o RF24-CA1 e o RF06-CA1, e zera o bloqueio de login daquele CPF.
 - **RF24-CA6**: "Liberar geração de senha" cria uma `LiberacaoGeofence` válida até o fim do dia operacional ou até ser usada; a lista mostra "Liberado".
-- **RF24-CA7**: busca por nome ou CPF via POST; o CPF nunca vai na URL.
+- **RF24-CA7**: busca e filtros no padrão do RF31: texto por Nome (padrão), CPF ou Telefone; opções de Região e Situação (Ativo, Inativo, Troca pendente, Liberado). O CPF nunca vai na URL.
+- **RF24-CA8**: as ações de cada motorista ficam num menu "⋮" no fim da linha: Editar, Ver histórico, Redefinir senha, Liberar geração de senha e Desativar (ou Reativar). O menu abre e fecha pelo teclado (Enter, setas, Esc) e fecha ao clicar fora.
 
 **RF25 — Bancadas e Regiões** (uma tela, três blocos)
 - **RF25-CA1**: bancadas por galpão: adicionar (identificação), renomear, desativar e reativar.
@@ -449,6 +445,7 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RF25-CA4**: desativar uma bancada com senhas ativas é bloqueado. Desativar uma região com motoristas ativos também é bloqueado. Nos dois casos a mensagem informa a quantidade.
 - **RF25-CA5**: mudar o mapeamento não altera senhas já geradas.
 - **RF25-CA6**: identificação de bancada repetida no mesmo galpão e código de região repetido mostram erro no campo.
+- **RF25-CA7**: cada card de galpão mostra no máximo 5 bancadas; com mais que isso, aparece "Ver mais (N)", que abre um modal com todas as bancadas do galpão, cada uma com renomear e Desativar/Reativar.
 
 **RF26 — Configurações**
 - **RF26-CA1**: campos editáveis e limites:
@@ -483,6 +480,12 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RF30-CA1**: toda ação do motorista mostra "Enviando…" e faz 1 envio + até 3 repetições automáticas, depois de 1, 2 e 4 s.
 - **RF30-CA2**: se as 4 tentativas falharem, aparece o banner "Sem conexão. Verifique sua internet e tente novamente.", com o botão "Tentar novamente".
 - **RF30-CA3**: as ações são idempotentes: repetir "Estou a caminho", cancelar ou concluir sobre um estado que já mudou devolve `CONFLITO` com o estado atual, que a tela renderiza sem mostrar erro (contrato da 6.0).
+
+**RF31 — Busca, filtros e ordenação das listagens** (Fila ao Vivo, Histórico, Motoristas e Administradores)
+- **RF31-CA1**: uma barra de busca pesquisa por Nome por padrão. Ao lado, o botão "Filtrar por" lista só os campos que existem como coluna na listagem (por isso CPF só aparece em Motoristas e Administradores). Escolher um campo de texto (ex.: Nº da senha) muda o alvo da barra, e o placeholder diz o campo.
+- **RF31-CA2**: escolher um campo de opções fechadas (ex.: Status, Galpão) abre um subfiltro com as opções. Cada opção escolhida vira uma etiqueta removível ao lado da barra; opções do mesmo campo se somam (OU) e campos diferentes se combinam (E).
+- **RF31-CA3**: os cabeçalhos das colunas de dados ordenam a lista; o segundo clique inverte a ordem. O cabeçalho ordenado mostra a seta e `aria-sort`.
+- **RF31-CA4**: busca e filtros vão no corpo de requisições POST ou ficam no estado da tela; nada disso entra na URL (RNF02-CA4), com a exceção do id do motorista do RF20-CA7.
 
 ### 6.2 Requisitos Não Funcionais
 
@@ -625,8 +628,7 @@ Todas as métricas saem do banco, exceto a adoção.
 | `/em-breve` | Abas futuras | — |
 | `/admin/login` | Login admin | — |
 | `/admin` | Fila ao Vivo | `170:26` |
-| `/admin/atendimentos` | Histórico de Atendimentos | `171:95` |
-| `/admin/senhas` | Histórico de Senhas | `172:170` |
+| `/admin/historico` | Histórico (senhas e atendimentos) | `171:95`, `172:170` |
 | `/admin/motoristas` | Motoristas | — |
 | `/admin/bancadas-regioes` | Bancadas e Regiões | — |
 | `/admin/configuracoes` | Configurações | — |
@@ -662,8 +664,8 @@ Regra: **todo CA tem um teste com o ID no nome** (ex.: `it('RF13-CA2: aceita Est
 | Camada | CAs |
 |---|---|
 | **Unit** (Vitest, `Clock` falso) | Toda a 6.0 (fórmulas, KPIs, arredondamento, dia operacional e quinzena, incluindo 23:30 de São Paulo, código, transições, status efetivo). RF01-CA5 · RF05-CA5 · RF08-CA1 · RF09-CA1, CA2, CA3, CA6 · RF11-CA1 · RF13-CA1, CA7 · RF22-CA3, CA4 · RNF04-CA4 |
-| **Integração** (Vitest + Postgres, `Clock` falso) | RF01-CA2, CA3, CA4 · RF02-CA1, CA2, CA4 · RF03-CA1, CA2 · RF04-CA1, CA2 · RF05-CA2 · RF06-CA1, CA2, CA3 · RF07-CA1, CA2, CA3, CA4 · RF08-CA2, CA3, CA4, CA5 · RF09-CA5, CA7, CA8 · RF10-CA1 a CA7 · RF12-CA2, CA3 · RF13-CA2, CA3, CA5, CA6 · RF15-CA1, CA2 · RF17-CA1, CA2, CA3, CA4, CA6, CA7 · RF18-CA1 a CA6 · RF19-CA1, CA2, CA3 · RF20-CA1, CA2, CA3, CA4, CA6 · RF21-CA1, CA2, CA3, CA5 · RF22-CA2, CA5 · RF24-CA1 a CA7 · RF25-CA1 a CA6 · RF26-CA1, CA2 · RF27-CA1, CA2, CA3, CA4 · RF28-CA1, CA2, CA3 · RF29-CA1 · RF30-CA3 · RNF01-CA2 · RNF02-CA1, CA2, CA3, CA4 · RNF06-CA1 |
-| **E2E** (Playwright, 2 contextos, `setGeolocation`) | RF01-CA1, CA6 · RF02-CA3 · RF04-CA3 · RF05-CA1, CA3, CA6 · RF08-CA6 · RF09-CA4 · RF11-CA2, CA3, CA4 · RF12-CA1 · RF13-CA4 · RF14-CA1 a CA6 · RF15-CA3, CA4 · RF16-CA1, CA2 · RF17-CA5, CA8, CA9, CA10 · RF20-CA5 · RF21-CA4 · RF22-CA1 · RF23-CA2, CA3 · RF30-CA1, CA2 · RNF01-CA1 · RNF04-CA1, CA2 |
+| **Integração** (Vitest + Postgres, `Clock` falso) | RF01-CA2, CA3, CA4 · RF02-CA1, CA2, CA4 · RF03-CA1, CA2 · RF04-CA1, CA2 · RF05-CA2 · RF06-CA1, CA2, CA3 · RF07-CA1, CA2, CA3, CA4 · RF08-CA2, CA3, CA4, CA5 · RF09-CA5, CA7, CA8 · RF10-CA1 a CA7 · RF12-CA2, CA3 · RF13-CA2, CA3, CA5, CA6 · RF15-CA1, CA2 · RF17-CA1, CA2, CA3, CA4, CA6, CA7 · RF18-CA1 a CA6 · RF19-CA1, CA2, CA3 · RF20-CA1, CA2, CA3, CA4, CA6 · RF22-CA2, CA5 · RF24-CA1 a CA7 · RF31-CA1, CA2, CA3 · RF25-CA1 a CA6 · RF26-CA1, CA2 · RF27-CA1, CA2, CA3, CA4 · RF28-CA1, CA2, CA3 · RF29-CA1 · RF30-CA3 · RNF01-CA2 · RNF02-CA1, CA2, CA3, CA4 · RNF06-CA1 |
+| **E2E** (Playwright, 2 contextos, `setGeolocation`) | RF01-CA1, CA6 · RF02-CA3 · RF04-CA3 · RF05-CA1, CA3, CA6 · RF08-CA6 · RF09-CA4 · RF11-CA2, CA3, CA4 · RF12-CA1 · RF13-CA4 · RF14-CA1 a CA6 · RF15-CA3, CA4 · RF16-CA1, CA2 · RF17-CA5, CA8, CA9, CA10 · RF20-CA5, CA7 · RF24-CA8 · RF25-CA7 · RF31-CA4 · RF22-CA1 · RF23-CA2, CA3 · RF30-CA1, CA2 · RNF01-CA1 · RNF04-CA1, CA2 |
 | **Carga** (`test:load`) | RNF01-CA3 |
 | **Manual** (`docs/checklist-manual.md`) | RF05-CA4 · RF23-CA1 · RNF01-CA4 · RNF02-CA5 · RNF04-CA3, com push e instalação reais em 1 Android e 1 iPhone |
 
@@ -776,6 +778,9 @@ Novos, feitos com os tokens e componentes acima:
 - `233:440`: legenda "Sua região não é atendida aqui" e os chips novos de geofence (10.5).
 - `10:2`: link "Como instalar o app".
 - Sidebar: item "Sair" e os itens novos do MVP.
+- `171:95` e `172:170`: viram uma tela só, "Histórico" (P28), com as colunas das duas e o filtro de Status.
+- Listagens do admin: a barra de filtros do Figma dá lugar à busca com "Filtrar por", etiquetas e cabeçalhos ordenáveis (RF31).
+- Motoristas: ações no menu "⋮" da linha (RF24-CA8).
 - Dados de exemplo de `170:26`: prefixo por galpão (P02) e posição por bancada, em vez de "A-" e 1º/2º/3º globais.
 
 ---
@@ -813,6 +818,7 @@ Cada linha traz o que o texto acima adota. As marcadas com **✔** foram confirm
 | P25 | B11 | Uma bancada atende mais de um motorista ao mesmo tempo? | **✔** não: um de cada vez; só se chama para uma bancada livre (RF18-CA6). Se o motorista chamado não aparecer, a bancada fica presa até ele confirmar, expirar (tolerância + carência) ou o admin confirmar a chegada |
 | P26 | B18 | Quantos motoristas cadastrados e qual o pico simultâneo? | **✔** em média 180 motoristas; o pico simultâneo não foi informado, então o teste de carga usa 50 conexões (folga sobre o maior galpão, ~71 atendimentos/dia) |
 | P27 | B28 | Média diária de atendimentos em DS SDE e SP-R-D228? | a CSM informa antes do go-live; não bloqueia o desenvolvimento |
+| P28 | — | Precisamos de duas telas de histórico (senhas e atendimentos)? | **✔** unificar em "Histórico" com filtro de Status; o motorista ganha "Ver histórico" (decisão do responsável pelo produto, 2026-11-14) |
 
 ---
 
@@ -825,6 +831,7 @@ Cada linha traz o que o texto acima adota. As marcadas com **✔** foram confirm
 | 0.3 | 2026-11-10 | Decisões do cliente: P03, P06, P07, P15 e P17 confirmadas; P21 muda a métrica de comparação para "tempo até iniciar o carregamento". Tabela de seed (locais, coordenadas, galpões) restaurada na 6.0. |
 | 0.4 | 2026-11-10 | Segunda revisão adversarial (29 achados). P16, P18 e P19 confirmadas. Perda de vez só depois da carência; escritas persistem a expiração; contrato `CONFLITO` das mutações; `/admin/trocar-senha`; seed só cria; virada com predicados exatos; `HORA_VIRADA` vira variável de ambiente; KPIs e filtros fechados; 9.6 lista todos os CAs por camada; novos CAs (RF04-CA3, RF08-CA6, RF10-CA6/CA7, RF17-CA10, RF18-CA6, RF20-CA6, RF21-CA5, RF23-CA3, RF25-CA6, RNF06-CA1); P25–P27. |
 | 0.5 | 2026-11-11 | P25 confirmada: bancada atende um por vez, então chamar para bancada ocupada é bloqueado (RF18-CA6, RF17-CA5) em vez de apenas avisar. P26: 180 motoristas. |
+| 0.6 | 2026-11-14 | Pedidos pós-revisão: Histórico unificado (RF20, P28; RF21 incorporado), RF31 (busca, filtros e ordenação das listagens), menu "⋮" de Motoristas (RF24-CA8), edição do nome do admin (RF27-CA4), checklist de revisão do front end (§13). |
 
 ---
 
