@@ -8,8 +8,9 @@ Atualizado em **2026-11-15**. Quem chega agora (pessoa ou Claude) deve ler, nest
 
 O **MVP da Fila está construído e testado localmente**: app do motorista (PWA) e painel admin,
 com tempo real (SSE), push (VAPID), cadastros, históricos e exportação CSV. A revisão geral do
-front end (PRD §13, itens FE-01 a FE-12) está concluída. **Falta publicar no Railway e validar em
-aparelhos reais** (push, instalação do PWA e GPS só se provam em HTTPS num celular de verdade).
+front end (PRD §13, itens FE-01 a FE-12) está concluída. **O staging está publicado no Railway
+(seção 6)**; falta validá-lo em aparelhos reais (push, instalação do PWA e GPS só se provam em HTTPS
+num celular de verdade) e então criar o ambiente de produção.
 
 Escopo do ciclo: **só a Fila** (motorista + painel). Disponibilidade, Demonstrativo/Acareação e
 Google Sheets estão fora e aparecem como "Em breve".
@@ -97,14 +98,34 @@ Vitest 181 testes, `test:ca-coverage` 155/155, lint, `tsc` e `build` sem erros o
 Playwright ~50 testes (inclui auditoria WCAG A/AA com axe em todas as telas e um vigia que falha
 o teste se o console do navegador registrar erro ou aviso não declarado).
 
-## 6. Próximos passos (em ordem)
+## 6. Staging no Railway (publicado em 2026-11-15)
 
-1. **Publicar em staging no Railway** (PRD §9.7): serviço `app` (Node 22) + PostgreSQL gerenciado.
-   - Variáveis: `DATABASE_URL`, `APP_URL`, `TZ=America/Sao_Paulo`, `HORA_VIRADA=00:00`,
-     `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:`), `SUPERADMIN_NOME`,
-     `SUPERADMIN_CPF`, `SUPERADMIN_SENHA_INICIAL`. Chaves VAPID: `npx web-push generate-vapid-keys`.
-   - Pre-deploy: `npm run db:deploy && npm run db:seed`. Start: `npm start`. 1 réplica.
-   - O seed só cria o que falta e nunca sobrescreve configuração, raios ou a senha do super-admin.
+- **Projeto:** `csm-fila-digital` (workspace "Victor Massaini's Projects"), ambiente `staging`
+  (project id `9248f70b-c749-4f26-b4f6-e61309381cb9`). Não confundir com o projeto `galileo`, que é de outro assunto.
+- **Serviços:** `app` (GitHub `massaini/csm-app`, branch `main`; **cada push na `main` faz deploy**) e
+  `Postgres` (template do Railway). URL: https://app-staging-645778d2.up.railway.app
+- **Configuração do `app`:** pre-deploy `npm run db:deploy && npm run db:seed`; start `npm start`;
+  healthcheck `/login` (120 s); 1 réplica. Build padrão do Railway (Railpack) com `npm run build`.
+- **Variáveis** (valores só no painel do Railway, nunca no git): `DATABASE_URL` (referência
+  `${{Postgres.DATABASE_URL}}`), `APP_URL`, `TZ`, `HORA_VIRADA`, `VAPID_PUBLIC_KEY`,
+  `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `SUPERADMIN_NOME`, `SUPERADMIN_CPF`, `SUPERADMIN_SENHA_INICIAL`.
+  No staging o super-admin usa o CPF de teste do ambiente local e a senha inicial gerada aleatoriamente
+  (troca obrigatória no primeiro login). Depois que o super-admin existir, `SUPERADMIN_SENHA_INICIAL`
+  pode ser removida (o seed só a lê quando não há super-admin). **As chaves VAPID do staging não devem
+  ser reaproveitadas na produção**: gere outras com `npx web-push generate-vapid-keys`.
+- **`prisma` e `tsx` ficam em `dependencies`** porque o pre-deploy e os comandos `admin:*` rodam no
+  container de produção.
+- **Verificado por HTTP no deploy:** `/login` 200 sem `X-Powered-By`; `/api/e2e` 404; `http` → `https`
+  (301); manifest, `sw.js` e ícones 200; `/api/stream` e `/api/fila/estado` sem sessão 401.
+- **Ainda não verificado:** login e uso do painel no staging, push e instalação em aparelho real,
+  carga, Lighthouse (ver `docs/checklist-manual.md`).
+- Comandos de operação no Railway (shell do serviço `app`): `npm run admin:redefinir-senha -- --cpf=<cpf>`.
+
+## 7. Próximos passos (em ordem)
+
+1. ~~Publicar em staging no Railway~~ — **feito** (seção 6). Para produção: criar o ambiente `production`
+   no mesmo projeto, com serviço `app` + `Postgres` próprios, variáveis reais (`SUPERADMIN_*` reais,
+   novas chaves VAPID, `APP_URL` do domínio de produção) e backup diário do Postgres.
 2. **Cabeçalho de IP do proxy do Railway:** a documentação do Railway diz que o proxy envia
    `X-Real-IP` com o IP do cliente, e `ipDoCliente()` (`src/server/http-sessao.ts`) já o prefere.
    Falta só confirmar em campo, no staging, que o valor é o IP real (afeta o bloqueio de IP, RF01-CA4).
@@ -120,7 +141,7 @@ o teste se o console do navegador registrar erro ou aviso não declarado).
 7. **Depois do MVP** (fora do escopo atual): Disponibilidade, Demonstrativo/Acareação, integração
    com Google Sheets.
 
-## 7. Regras de trabalho
+## 8. Regras de trabalho
 
 - **PRD é a fonte da verdade.** Mudou o comportamento, atualize o PRD (e a versão) no mesmo commit.
   Todo teste leva o id do critério no nome (`it('RF13-CA2: …')`).
@@ -132,7 +153,7 @@ o teste se o console do navegador registrar erro ou aviso não declarado).
 - Textos do app em pt-BR; vocabulário: **bancada** (não "doca"), **galpão**, **rota/região**, **senha**.
 - Itens novos que surgirem numa revisão entram no PRD como itens não marcados antes de serem corrigidos.
 
-## 8. Mapa rápido
+## 9. Mapa rápido
 
 - `src/domain/` regras puras · `src/server/` banco, auth, senhas, painel, push, tempo real, job
 - `src/app/` telas do motorista; `src/app/admin/` painel; `src/app/api/` consulta, exportar, stream, push, estado

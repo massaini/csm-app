@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **CSM Fila Digital** — a digital queue for truck drivers at CSM (road freight carrier): drivers generate a password ("senha") at the yard, follow their position and get called to a loading bench ("bancada"); admins run the queue from a web panel. Scope of the current cycle: **MVP da Fila only** (driver PWA + admin panel). Availability, Demonstrativo/Acareação and Google Sheets are out of scope.
 
-The MVP is **built and tested locally** (driver PWA + admin panel, real time, push, registrations, history, CSV export) and the front-end review is done. **What remains is the Railway deploy and real-device validation.** Current status, run instructions, pitfalls and the ordered next steps live in **`docs/ANDAMENTO.md` — read it first**; `progress.txt` is the diary of the front-end review (PRD §13).
+The MVP is **built and tested locally** (driver PWA + admin panel, real time, push, registrations, history, CSV export) and the front-end review is done. **Staging is deployed on Railway (every push to `main` redeploys it); what remains is real-device validation and the production environment.** Current status, run instructions, pitfalls and the ordered next steps live in **`docs/ANDAMENTO.md` — read it first**; `progress.txt` is the diary of the front-end review (PRD §13).
 
 Source of truth, in order:
 1. **`docs/PRD.md`** (v0.6, approved, committed) — requirements (RF/RNF with acceptance criteria), domain model, state machine, formulas, tech spec, test strategy, design tokens. Read the relevant section before implementing; do not re-derive rules from the Figma.
