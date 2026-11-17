@@ -74,8 +74,8 @@ test('RNF04-CA2: telas do admin sem rolagem horizontal da página a 1280 px', as
     '/admin',
     '/admin/historico',
     '/admin/motoristas',
-    '/admin/bancadas-regioes',
-    '/admin/configuracoes',
+    '/admin/bancadas',
+    '/admin/regioes',
     '/admin/administradores',
   ]) {
     await admin.goto(rota);
@@ -120,7 +120,7 @@ test('RF27-CA4: o super-admin edita o próprio nome e o motorista o vê como Con
   await expect(motorista.getByText('Marcos Tavares')).toBeVisible();
 });
 
-test('RF24-CA8 / RF20-CA7: o menu "⋮" do motorista abre pelo teclado e "Ver histórico" filtra por ele', async ({
+test('RF24-CA8 / RF24-CA9 / RF20-CA7: o menu "⋮" do motorista abre pelo teclado e "Ver histórico" filtra por ele', async ({
   browser,
 }) => {
   const joao = await (await contextoMotorista(browser)).newPage();
@@ -145,6 +145,7 @@ test('RF24-CA8 / RF20-CA7: o menu "⋮" do motorista abre pelo teclado e "Ver hi
     'Redefinir senha',
     'Liberar geração de senha',
     'Desativar',
+    'Excluir', // o admin dos testes é o super-admin (RF24-CA9)
   ]);
   await expect(menu.getByRole('menuitem', { name: 'Editar' })).toBeFocused();
   await admin.keyboard.press('ArrowDown');
@@ -210,7 +211,7 @@ test('RF25-CA7: o card mostra 5 bancadas; "Ver mais" abre todas, com Desativar e
   }
   const admin = await (await contextoAdmin(browser)).newPage();
   await entrarAdmin(admin);
-  await admin.goto('/admin/bancadas-regioes');
+  await admin.goto('/admin/bancadas');
 
   // 6 bancadas no galpão: o card mostra só as 5 primeiras
   const card = admin
@@ -233,4 +234,55 @@ test('RF25-CA7: o card mostra 5 bancadas; "Ver mais" abre todas, com Desativar e
   ).toBeVisible();
   await modal.getByRole('button', { name: 'Fechar' }).click();
   await expect(modal).toBeHidden();
+});
+
+test('RF25-CA9: "Bancadas e Regiões" abre no menu lateral com Bancadas e Regiões', async ({
+  browser,
+}) => {
+  const admin = await (await contextoAdmin(browser)).newPage();
+  await entrarAdmin(admin);
+  const menu = admin.getByRole('navigation', { name: 'Painel' });
+  const grupo = menu.getByRole('button', { name: 'Bancadas e Regiões' });
+  await expect(grupo).toHaveAttribute('aria-expanded', 'false');
+  await expect(menu.getByRole('link', { name: 'Bancadas', exact: true })).toHaveCount(0);
+
+  await grupo.click();
+  await expect(grupo).toHaveAttribute('aria-expanded', 'true');
+  await menu.getByRole('link', { name: 'Regiões', exact: true }).click();
+  await expect(admin).toHaveURL(/\/admin\/regioes$/);
+  await expect(admin.getByRole('heading', { level: 1, name: 'Regiões' })).toBeVisible();
+  // na tela de um dos subitens o grupo já vem aberto, com o subitem marcado
+  await expect(menu.getByRole('link', { name: 'Regiões', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await menu.getByRole('link', { name: 'Bancadas', exact: true }).click();
+  await expect(admin.getByRole('heading', { level: 1, name: 'Bancadas' })).toBeVisible();
+
+  // o endereço antigo leva para Bancadas
+  await admin.goto('/admin/bancadas-regioes');
+  await expect(admin).toHaveURL(/\/admin\/bancadas$/);
+});
+
+test('RF25-CA2: o mesmo código de região ganha outro bairro pela tela', async ({ browser }) => {
+  const admin = await (await contextoAdmin(browser)).newPage();
+  await entrarAdmin(admin);
+  await admin.goto('/admin/regioes');
+  await admin.getByLabel('Código da região').fill('545');
+  await admin.getByLabel('Bairro da região').fill('Paranapiacaba');
+  await admin.getByRole('button', { name: 'Adicionar', exact: true }).click();
+  await expect(admin.getByRole('status')).toHaveText('Região 545 criada.');
+
+  await admin.getByLabel('Código da região').fill('545');
+  await admin.getByLabel('Bairro da região').fill('Represa Billings');
+  await admin.getByRole('button', { name: 'Adicionar', exact: true }).click();
+  await expect(admin.getByRole('status')).toHaveText(
+    'Bairro Represa Billings adicionado à região 545.',
+  );
+  await expect(admin.getByRole('button', { name: 'Renomear Paranapiacaba' })).toBeVisible();
+  await expect(admin.getByRole('button', { name: 'Renomear Represa Billings' })).toBeVisible();
+  // no mapeamento, uma linha só para o código, com os dois bairros
+  await expect(
+    admin.getByRole('cell', { name: '545 · Paranapiacaba, Represa Billings' }),
+  ).toBeVisible();
 });

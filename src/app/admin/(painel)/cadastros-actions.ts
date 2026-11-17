@@ -42,9 +42,22 @@ export async function liberarGeracaoDeSenha(id: number) {
   return { expiraEm: l.expiraEm.toISOString() };
 }
 
-/* Bancadas e regiões */
+/** RF24-CA9 — a função confere o papel; um ADMIN recebe a mensagem de erro. */
+export async function excluirMotorista(id: number) {
+  const admin = await exigirAdmin();
+  return cad.excluirMotorista(
+    deps(),
+    { id: admin.id, papel: admin.papel === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN' },
+    id,
+  );
+}
 
-const recarregarBancadas = () => revalidatePath('/admin/bancadas-regioes');
+/* Bancadas e regiões: duas telas que leem os mesmos dados */
+
+const recarregarBancadas = () => {
+  revalidatePath('/admin/bancadas');
+  revalidatePath('/admin/regioes');
+};
 
 export async function novaBancada(galpaoId: number, identificacao: string) {
   const admin = await exigirAdmin();
@@ -67,16 +80,37 @@ export async function alterarAtivaBancada(bancadaId: number, ativa: boolean) {
   return r;
 }
 
-export async function novaRegiao(codigo: string, nome: string) {
+export async function excluirBancada(bancadaId: number) {
   const admin = await exigirAdmin();
-  const r = await cad.criarRegiao(deps(), admin.id, { codigo, nome });
+  const r = await cad.excluirBancada(deps(), admin.id, bancadaId);
   recarregarBancadas();
   return r;
 }
 
-export async function renomearRegiao(regiaoId: number, nome: string) {
+export async function novaRegiao(codigo: string, bairro: string) {
   const admin = await exigirAdmin();
-  const r = await cad.renomearRegiao(deps(), admin.id, regiaoId, nome);
+  const r = await cad.criarRegiao(deps(), admin.id, { codigo, nome: bairro });
+  recarregarBancadas();
+  return r;
+}
+
+export async function renomearBairro(regiaoId: number, de: string, para: string) {
+  const admin = await exigirAdmin();
+  const r = await cad.renomearBairro(deps(), admin.id, regiaoId, de, para);
+  recarregarBancadas();
+  return r;
+}
+
+export async function removerBairro(regiaoId: number, bairro: string) {
+  const admin = await exigirAdmin();
+  const r = await cad.removerBairro(deps(), admin.id, regiaoId, bairro);
+  recarregarBancadas();
+  return r;
+}
+
+export async function excluirRegiao(regiaoId: number) {
+  const admin = await exigirAdmin();
+  const r = await cad.excluirRegiao(deps(), admin.id, regiaoId);
   recarregarBancadas();
   return r;
 }
@@ -95,12 +129,12 @@ export async function mapear(galpaoId: number, regiaoId: number, bancadaId: numb
   return r;
 }
 
-/* Configurações */
+/* Configurações — ficam na Fila ao Vivo (RF26-CA3) */
 
 export async function salvarConfiguracoes(dados: Parameters<typeof cad.salvarConfiguracoes>[2]) {
   const admin = await exigirAdmin();
   const r = await cad.salvarConfiguracoes(deps(), admin.id, dados);
-  revalidatePath('/admin/configuracoes');
+  revalidatePath('/admin');
   return r;
 }
 
@@ -124,6 +158,13 @@ export async function alterarAtivoAdmin(id: number, ativo: boolean) {
   const r = ativo
     ? (await cad.reativarAdmin(deps(), s.id, id), { ok: true as const })
     : await cad.desativarAdmin(deps(), s.id, id);
+  revalidatePath('/admin/administradores');
+  return r;
+}
+
+export async function excluirAdminAction(id: number) {
+  const s = await exigirSuper();
+  const r = await cad.excluirAdmin(deps(), s.id, id);
   revalidatePath('/admin/administradores');
   return r;
 }

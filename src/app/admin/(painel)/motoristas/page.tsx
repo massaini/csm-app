@@ -7,7 +7,7 @@ import { Motoristas } from './motoristas';
 export const metadata = { title: 'Motoristas · Painel CSM' };
 
 export default async function PaginaMotoristas() {
-  await exigirAdmin();
+  const eu = await exigirAdmin();
   const [inicial, regioes] = await Promise.all([
     listarMotoristas({ db, clock: relogioApp }),
     db.regiao.findMany({
@@ -16,5 +16,11 @@ export default async function PaginaMotoristas() {
       select: { id: true, codigo: true, nome: true },
     }),
   ]);
-  return <Motoristas inicial={inicial} regioes={regioes} />;
+  return (
+    <Motoristas
+      inicial={inicial}
+      regioes={regioes}
+      podeExcluir={eu.papel === 'SUPER_ADMIN'}
+    />
+  );
 }

@@ -87,12 +87,20 @@ test('RF04-CA3: o motorista sai pelo histórico e o admin pela barra lateral', a
   await expect(admin).toHaveURL(/\/admin\/login$/);
 });
 
-test('RF27-CA2: um admin comum não vê nem acessa Administradores', async ({ browser }) => {
+test('RF27-CA2 / RF24-CA9: um admin comum não vê nem acessa Administradores, nem exclui motoristas', async ({
+  browser,
+}) => {
   const admin = await (await contextoAdmin(browser)).newPage();
   await entrarAdmin(admin, CPF.admin);
   await expect(admin.getByRole('link', { name: 'Administradores' })).toHaveCount(0);
   await admin.goto('/admin/administradores');
   await expect(admin).toHaveURL(/\/admin$/);
+
+  await admin.goto('/admin/motoristas');
+  await admin.getByRole('button', { name: 'Ações de João da Silva' }).click();
+  const menu = admin.getByRole('menu', { name: 'Ações de João da Silva' });
+  await expect(menu.getByRole('menuitem', { name: 'Desativar' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Excluir' })).toHaveCount(0);
 });
 
 test('RNF02-CA4 / RF31-CA4: buscar no painel (CPF em Motoristas, nome na fila) não põe dados em nenhuma URL', async ({

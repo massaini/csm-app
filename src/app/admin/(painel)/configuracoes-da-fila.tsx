@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { CabecalhoDaTela, FALHA_AO_ENVIAR, tentar } from '@/components/admin/comum';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { FALHA_AO_ENVIAR, tentar } from '@/components/admin/comum';
 import { Card, MensagemDeErro } from '@/components/ui/basicos';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import type { lerConfiguracoes } from '@/server/cadastros';
-import { salvarConfiguracoes } from '../cadastros-actions';
+import { salvarConfiguracoes } from './cadastros-actions';
 
-type Cfg = Awaited<ReturnType<typeof lerConfiguracoes>>;
+export type Cfg = Awaited<ReturnType<typeof lerConfiguracoes>>;
 
 const CAMPOS = [
   {
@@ -45,8 +45,11 @@ const CAMPOS = [
   },
 ] as const;
 
-/** RF26 — configurações operacionais, com limites e auditoria. */
-export function Configuracoes({ inicial }: { inicial: Cfg }) {
+/**
+ * RF26 — configurações operacionais, com limites e auditoria. Fica recolhida no fim da Fila ao
+ * Vivo (RF26-CA3): é ajuste raro, e a fila é a tela que mais usa esses valores.
+ */
+export function ConfiguracoesDaFila({ inicial }: { inicial: Cfg }) {
   const [valores, setValores] = useState({
     toleranciaMin: String(inicial.toleranciaMin),
     carenciaSeg: String(inicial.carenciaSeg),
@@ -58,6 +61,15 @@ export function Configuracoes({ inicial }: { inicial: Cfg }) {
   );
   const [erros, setErros] = useState<Record<string, string>>({});
   const [estado, setEstado] = useState<'ocioso' | 'salvando' | 'salvo'>('ocioso');
+  const secao = useRef<HTMLDetailsElement>(null);
+
+  // quem chega pelo endereço antigo (/admin/configuracoes → /admin#configuracoes) já vê aberto
+  useEffect(() => {
+    if (window.location.hash === '#configuracoes' && secao.current) {
+      secao.current.open = true;
+      secao.current.scrollIntoView();
+    }
+  }, []);
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
@@ -78,12 +90,25 @@ export function Configuracoes({ inicial }: { inicial: Cfg }) {
   }
 
   return (
-    <main>
-      <CabecalhoDaTela
-        titulo="Configurações"
-        subtitulo="Regras operacionais da fila. Toda alteração fica registrada na auditoria."
-      />
-      <form onSubmit={enviar} noValidate className="mt-xl flex max-w-[860px] flex-col gap-xl">
+    <details
+      ref={secao}
+      id="configuracoes"
+      className="group mt-2xl rounded-lg border border-border-strong/60"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-base rounded-lg px-xl py-base hover:bg-elevated/60 [&::-webkit-details-marker]:hidden">
+        <span>
+          <span className="t-title-s block">Configurações da fila</span>
+          <span className="t-body-s text-text-secondary">
+            Tolerância {inicial.toleranciaMin} min · carência {inicial.carenciaSeg} s · raio do
+            pátio. Toda alteração fica registrada na auditoria.
+          </span>
+        </span>
+        <span aria-hidden className="t-body-m text-text-muted transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+
+      <form onSubmit={enviar} noValidate className="flex flex-col gap-xl px-xl pb-xl pt-base">
         <Card>
           <p className="t-overline text-text-muted">Fila e chamada</p>
           <div className="mt-base grid grid-cols-2 gap-base">
@@ -152,6 +177,6 @@ export function Configuracoes({ inicial }: { inicial: Cfg }) {
           {erros.geral ? <MensagemDeErro>{erros.geral}</MensagemDeErro> : null}
         </div>
       </form>
-    </main>
+    </details>
   );
 }

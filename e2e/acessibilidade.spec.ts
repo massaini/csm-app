@@ -125,11 +125,14 @@ test('FE-03: telas do painel sem violações WCAG A/AA', async ({ browser }) => 
   await entrarAdmin(admin);
   await expect(admin.getByRole('row').filter({ hasText: 'A-001' })).toBeVisible();
   await auditar(admin, '/admin');
+  await admin.getByText('Configurações da fila').click();
+  await expect(admin.getByRole('button', { name: 'Salvar configurações' })).toBeVisible();
+  await auditar(admin, '/admin (configurações abertas)');
   for (const rota of [
     '/admin/historico',
     '/admin/motoristas',
-    '/admin/bancadas-regioes',
-    '/admin/configuracoes',
+    '/admin/bancadas',
+    '/admin/regioes',
     '/admin/administradores',
   ]) {
     await admin.goto(rota);
@@ -206,16 +209,18 @@ test('FE-11: os campos de Bancadas e Regiões têm nome acessível, inclusive na
 }) => {
   const admin = await (await contextoAdmin(browser)).newPage();
   await entrarAdmin(admin);
-  await admin.goto('/admin/bancadas-regioes');
+  await admin.goto('/admin/bancadas');
   await expect(admin.getByLabel('Nova bancada no galpão F SDR')).toBeVisible();
-  await expect(admin.getByLabel('Código da nova região')).toBeVisible();
-  await expect(admin.getByLabel('Nome da nova região')).toBeVisible();
 
   await admin.getByRole('button', { name: 'Renomear Bancada 08' }).click();
   const campo = admin.getByLabel('Novo nome da bancada 08 do galpão F SDR');
   await expect(campo).toBeFocused();
-  await auditar(admin, '/admin/bancadas-regioes (renomeando)');
+  await auditar(admin, '/admin/bancadas (renomeando)');
   await campo.fill('09');
   await admin.keyboard.press('Enter');
   await expect(admin.getByRole('button', { name: 'Renomear Bancada 09' })).toBeVisible();
+
+  await admin.goto('/admin/regioes');
+  await expect(admin.getByLabel('Código da região')).toBeVisible();
+  await expect(admin.getByLabel('Bairro da região')).toBeVisible();
 });

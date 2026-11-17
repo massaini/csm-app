@@ -61,11 +61,19 @@ test('FE-04: falha numa confirmação do painel fecha o diálogo e avisa', async
   await expect(linha.getByText('Ativo', { exact: true })).toBeVisible();
 });
 
-test('FE-04: falha ao salvar configurações mostra o erro e libera o botão', async ({ browser }) => {
+test('FE-04 / RF26-CA3: configurações ficam na Fila ao Vivo; falha ao salvar mostra o erro e libera o botão', async ({
+  browser,
+}) => {
   const admin = await (await contextoAdmin(browser)).newPage();
   await entrarAdmin(admin);
+  // a seção começa fechada e não tem item próprio no menu
+  await expect(admin.getByRole('link', { name: 'Configurações' })).toHaveCount(0);
+  await expect(admin.getByRole('button', { name: 'Salvar configurações' })).toBeHidden();
+  // o endereço antigo leva para a Fila ao Vivo com a seção aberta
   await admin.goto('/admin/configuracoes');
-  await expect(admin.getByRole('heading', { name: 'Configurações' })).toBeVisible();
+  await expect(admin).toHaveURL(/\/admin#configuracoes$/);
+  await expect(admin.getByRole('heading', { name: 'Fila ao Vivo' })).toBeVisible();
+  await expect(admin.getByRole('button', { name: 'Salvar configurações' })).toBeVisible();
   await derrubarAcoes(admin);
   await admin.getByRole('button', { name: 'Salvar configurações' }).click();
   await expect(admin.getByRole('alert').filter({ hasText: FALHA })).toBeVisible();

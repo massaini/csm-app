@@ -63,7 +63,7 @@ Redefinir a senha de um admin (comando do desenvolvedor, RF27-CA3):
 | Servidor | serviço da senha (máquina de estados com UPDATE condicional → `CONFLITO`), auth CPF+senha com bloqueio, sessões | `3850560`, `0def5b1` |
 | Motorista | login, troca de senha, Gerar senha (GPS), Aguardando, Chamado, Em atendimento, Concluído, Histórico | `29bebe4` e seguintes |
 | Painel | Fila ao Vivo (chamar, confirmar chegada, concluir), Histórico, exportar CSV | `cb56449` |
-| Cadastros | Motoristas, Bancadas e Regiões (mapeamento região → bancada), Configurações, Administradores | `2cf43eb` |
+| Cadastros | Motoristas, Bancadas, Regiões (mapeamento região → bancada), Configurações (na Fila ao Vivo), Administradores | `2cf43eb` |
 | Tempo real | `NOTIFY`/`LISTEN` + SSE; polling de 4 s como reserva | `6e2de9e` |
 | Push/PWA | Web Push, service worker só de push (sem cache), manifest, instalação | `4e795b1` |
 | E2E | Playwright em 2 contextos, relógio do servidor controlável (`E2E=1`) | `52872df` |
@@ -90,7 +90,19 @@ O detalhe do que foi inspecionado e alterado em cada item da revisão está em `
   (P10). No ambiente local o super-admin vem do `.env` com o nome "Super Admin": corrija em
   Administradores → Editar nome.
 - **Cursor de mãozinha** em todo elemento clicável (`globals.css`).
-- PRD está na **v0.6**; os desvios em relação ao Figma validado pelo cliente estão no §10.6.
+- **Ajustes do painel (PRD v0.7, 2026-11-16):**
+  - Paginação de 50 na Fila ao Vivo (no cliente, porque as posições dependem da fila inteira;
+    RF17-CA11). A barra de paginação aparece sempre que há registros, inclusive no Histórico com
+    uma página só (RF20-CA4).
+  - Excluir: motorista (só super-admin, RF24-CA9), bancada e região (RF25-CA8) e administrador
+    (RF27-CA5). Só sem histórico (P30); com histórico, a mensagem manda usar Desativar.
+  - Bancadas e Regiões viraram `/admin/bancadas` e `/admin/regioes`, num grupo que abre no menu
+    lateral (RF25-CA9). `/admin/bancadas-regioes` redireciona.
+  - Região com vários bairros por código (P29, RF25-CA2): coluna `Regiao.bairros` (migração
+    `20261116000000_regiao_bairros`); `nome` continua sendo o texto exibido, com os bairros juntos.
+  - Configurações saíram do menu e viraram a seção "Configurações da fila" no fim da Fila ao Vivo
+    (RF26-CA3). `/admin/configuracoes` redireciona para `/admin#configuracoes`, com a seção aberta.
+- PRD está na **v0.7**; os desvios em relação ao Figma validado pelo cliente estão no §10.6.
 
 ## 5. Qualidade (última verificação completa)
 

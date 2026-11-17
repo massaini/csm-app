@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   BarraDeBusca,
   estadoInicial,
@@ -16,6 +16,8 @@ import {
   FALHA_AO_ENVIAR,
   Kpi,
   LinhaDeKpis,
+  Paginacao,
+  paginar,
   Tabela,
   useAgoraServidor,
   useAvisoTemporario,
@@ -29,6 +31,8 @@ import type { FilaAoVivo as Dados, LinhaFila } from '@/server/painel';
 import { acaoChamar, acaoConcluir, acaoConfirmarChegada, type RespostaAdmin } from './actions';
 
 const POLLING_MS = 4_000;
+/** RF17-CA11: mesmo tamanho de página do Histórico (RF20-CA4). */
+const POR_PAGINA_FILA = 50;
 
 const subtitulo = (iso: string) => {
   const d = new Date(iso);
@@ -84,9 +88,10 @@ const VALOR_DA_COLUNA: Record<string, (l: LinhaFila) => string | number | null> 
   tempo: (l) => l.tempoMin,
 };
 
-export function FilaAoVivo() {
+export function FilaAoVivo({ configuracoes }: { configuracoes?: ReactNode }) {
   const [busca, setBusca] = useState<EstadoBusca>(estadoInicial());
   const [ordem, setOrdem] = useState<Ordem | null>(null);
+  const [pagina, setPagina] = useState(1);
   const numeros = (chave: string) => (busca.selecoes[chave] ?? []).map(Number);
   const consulta: Consulta = {
     tela: 'fila-ao-vivo',
@@ -152,7 +157,21 @@ export function FilaAoVivo() {
       opcoes: STATUS_FILA.map((s) => ({ valor: s, rotulo: CHIP[s].texto })),
     },
   ];
-  const linhas = ordenarLocal(dados?.linhas ?? [], ordem, VALOR_DA_COLUNA);
+  // a fila inteira chega do servidor (as posições dependem de todas as senhas); a página e a
+  // ordenação pelas colunas são feitas aqui, então ordenar vale para a fila toda (RF17-CA11)
+  const todas = ordenarLocal(dados?.linhas ?? [], ordem, VALOR_DA_COLUNA);
+  // a fila encolhe sozinha (chamadas concluídas): nunca fica numa página que deixou de existir
+  const {
+    linhas,
+    pagina: paginaAtual,
+    paginas,
+  } = paginar(todas, pagina, POR_PAGINA_FILA);
+
+  // qualquer mudança de filtro ou de ordem volta para a primeira página
+  const mudarBusca = (e: EstadoBusca) => {
+    setBusca(e);
+    setPagina(1);
+  };
 
   return (
     <main>
@@ -173,7 +192,7 @@ export function FilaAoVivo() {
         />
       </LinhaDeKpis>
 
-      <BarraDeBusca campos={campos} estado={busca} aoMudar={setBusca} />
+      <BarraDeBusca campos={campos} estado={busca} aoMudar={mudarBusca} />
 
       {aviso || erro ? (
         <MensagemDeErro className="mt-base">
@@ -186,7 +205,10 @@ export function FilaAoVivo() {
         falhou={erro && !dados}
         vazia="Nenhum motorista na fila agora"
         ordem={ordem}
-        aoOrdenar={(c) => setOrdem(proximaOrdem(ordem, c))}
+        aoOrdenar={(c) => {
+          setOrdem(proximaOrdem(ordem, c));
+          setPagina(1);
+        }}
         colunas={[
           { titulo: 'Senha', ordenar: 'codigo' },
           { titulo: 'Motorista', ordenar: 'motorista' },
@@ -253,6 +275,15 @@ export function FilaAoVivo() {
           </tr>
         ))}
       </Tabela>
+
+      <Paginacao
+        pagina={paginaAtual}
+        paginas={paginas}
+        total={todas.length}
+        aoMudar={setPagina}
+      />
+
+      {configuracoes}
 
       <Confirmacao
         aberta={pendente?.tipo === 'fora-de-ordem'}

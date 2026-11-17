@@ -27,10 +27,38 @@ import { formatarCpf } from '@/domain/documentos';
 import type { listarAdmins } from '@/server/cadastros';
 import {
   alterarAtivoAdmin,
+  excluirAdminAction,
   novoAdmin,
   redefinirSenhaAdmin,
   renomearAdminAction,
 } from '../cadastros-actions';
+
+type TipoPendente = 'desativar' | 'redefinir' | 'excluir';
+
+const CONFIRMACAO: Record<
+  TipoPendente,
+  { titulo: string; texto: (nome: string) => string; botao: string; perigo: boolean }
+> = {
+  desativar: {
+    titulo: 'Desativar administrador?',
+    texto: (nome) => `${nome} perde o acesso ao painel agora.`,
+    botao: 'Desativar',
+    perigo: true,
+  },
+  redefinir: {
+    titulo: 'Redefinir senha?',
+    texto: (nome) => `${nome} sai do painel e recebe uma senha temporária nova.`,
+    botao: 'Confirmar',
+    perigo: false,
+  },
+  excluir: {
+    titulo: 'Excluir administrador?',
+    texto: (nome) =>
+      `${nome} sai do cadastro. Não dá para desfazer. Se já atendeu motoristas, use Desativar: o histórico precisa dele.`,
+    botao: 'Excluir',
+    perigo: true,
+  },
+};
 
 type Admin = Awaited<ReturnType<typeof listarAdmins>>[number];
 
@@ -77,9 +105,7 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
     },
   );
   const [senha, setSenha] = useState<{ para: string; senha: string } | null>(null);
-  const [pendente, setPendente] = useState<{ tipo: 'desativar' | 'redefinir'; a: Admin } | null>(
-    null,
-  );
+  const [pendente, setPendente] = useState<{ tipo: TipoPendente; a: Admin } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -88,8 +114,10 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
     const { tipo, a } = pendente;
     setErro(null);
     setEnviando(true);
-    if (tipo === 'desativar') {
-      const r = await tentar(() => alterarAtivoAdmin(a.id, false));
+    if (tipo === 'desativar' || tipo === 'excluir') {
+      const r = await tentar(() =>
+        tipo === 'excluir' ? excluirAdminAction(a.id) : alterarAtivoAdmin(a.id, false),
+      );
       if (!r) setErro(FALHA_AO_ENVIAR);
       else if (!r.ok) setErro(Object.values(r.erros)[0]);
     } else {
@@ -112,7 +140,7 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
     <main>
       <CabecalhoDaTela
         titulo="Administradores"
-        subtitulo="Só o super-administrador vê esta tela. O super-administrador não pode ser desativado."
+        subtitulo="Só o super-administrador vê esta tela. O super-administrador não pode ser desativado nem excluído."
         acao={
           <Button bloco={false} className="w-[228px]" onClick={() => setCriando(true)}>
             + Novo administrador
@@ -169,6 +197,16 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
                 ) : (
                   <BotaoDaTabela onClick={() => void reativar(a)}>Reativar</BotaoDaTabela>
                 )}
+                {/* RF27-CA5: nem o super-admin nem a própria conta */}
+                {a.papel === 'SUPER_ADMIN' || a.id === meuId ? null : (
+                  <BotaoDaTabela
+                    perigo
+                    aria-label={`Excluir ${a.nome}`}
+                    onClick={() => setPendente({ tipo: 'excluir', a })}
+                  >
+                    Excluir
+                  </BotaoDaTabela>
+                )}
               </div>
             </td>
           </tr>
@@ -212,15 +250,11 @@ export function Administradores({ admins, meuId }: { admins: Admin[]; meuId: num
 
       <Confirmacao
         aberta={pendente !== null}
-        titulo={pendente?.tipo === 'desativar' ? 'Desativar administrador?' : 'Redefinir senha?'}
-        texto={
-          pendente?.tipo === 'desativar'
-            ? `${pendente.a.nome} perde o acesso ao painel agora.`
-            : `${pendente?.a.nome ?? ''} sai do painel e recebe uma senha temporária nova.`
-        }
-        confirmar={pendente?.tipo === 'desativar' ? 'Desativar' : 'Confirmar'}
+        titulo={pendente ? CONFIRMACAO[pendente.tipo].titulo : ''}
+        texto={pendente ? CONFIRMACAO[pendente.tipo].texto(pendente.a.nome) : ''}
+        confirmar={pendente ? CONFIRMACAO[pendente.tipo].botao : 'Confirmar'}
         voltar="Cancelar"
-        perigo={pendente?.tipo === 'desativar'}
+        perigo={pendente ? CONFIRMACAO[pendente.tipo].perigo : false}
         pendente={enviando}
         aoFechar={() => setPendente(null)}
         aoConfirmar={() => void confirmar()}

@@ -90,7 +90,11 @@ async function dadosDeDesenvolvimento() {
     { codigo: '620', nome: 'Osasco' },
   ];
   for (const r of regioes) {
-    await db.regiao.upsert({ where: { codigo: r.codigo }, update: {}, create: r });
+    await db.regiao.upsert({
+      where: { codigo: r.codigo },
+      update: {},
+      create: { ...r, bairros: [r.nome] },
+    });
   }
   const galpoes = await db.galpao.findMany();
   for (const g of galpoes) {

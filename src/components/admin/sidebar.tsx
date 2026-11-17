@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { Logo } from '@/components/ui/logo';
 
 type Icone =
@@ -9,7 +10,6 @@ type Icone =
   | 'atendimentos'
   | 'motoristas'
   | 'bancadas'
-  | 'configuracoes'
   | 'administradores'
   | 'confirmacoes'
   | 'demonstrativos';
@@ -56,14 +56,6 @@ function IconeDoItem({ icone }: { icone: Icone }) {
           <rect x="9" y="9" width="5" height="5" rx="1" />
         </svg>
       );
-    case 'configuracoes':
-      return (
-        <svg {...comum}>
-          <path d="M2 4h7M12 4h2M2 12h2M7 12h7" />
-          <circle cx="10.5" cy="4" r="1.5" />
-          <circle cx="5.5" cy="12" r="1.5" />
-        </svg>
-      );
     case 'administradores':
       return (
         <svg {...comum}>
@@ -92,14 +84,23 @@ interface Item {
   /** fase futura ou fatia ainda não entregue: aparece desabilitado com "Em breve" */
   emBreve?: boolean;
   apenasSuper?: boolean;
+  /** grupo que abre no próprio menu lateral (RF25-CA9) */
+  filhos?: { href: string; rotulo: string }[];
 }
 
 const ITENS: Item[] = [
   { href: '/admin', rotulo: 'Fila ao Vivo', icone: 'fila' },
   { href: '/admin/historico', rotulo: 'Histórico', icone: 'atendimentos' },
   { href: '/admin/motoristas', rotulo: 'Motoristas', icone: 'motoristas' },
-  { href: '/admin/bancadas-regioes', rotulo: 'Bancadas e Regiões', icone: 'bancadas' },
-  { href: '/admin/configuracoes', rotulo: 'Configurações', icone: 'configuracoes' },
+  {
+    href: '#bancadas-regioes',
+    rotulo: 'Bancadas e Regiões',
+    icone: 'bancadas',
+    filhos: [
+      { href: '/admin/bancadas', rotulo: 'Bancadas' },
+      { href: '/admin/regioes', rotulo: 'Regiões' },
+    ],
+  },
   {
     href: '/admin/administradores',
     rotulo: 'Administradores',
@@ -109,6 +110,59 @@ const ITENS: Item[] = [
   { href: '#confirmacoes', rotulo: 'Confirmações', icone: 'confirmacoes', emBreve: true },
   { href: '#demonstrativos', rotulo: 'Demonstrativos', icone: 'demonstrativos', emBreve: true },
 ];
+
+/** Item que abre os subitens logo abaixo dele; começa aberto quando a tela atual é um deles. */
+function Grupo({
+  item,
+  filhos,
+  atual,
+}: {
+  item: Item;
+  filhos: { href: string; rotulo: string }[];
+  atual: string;
+}) {
+  const dentro = filhos.some((f) => f.href === atual);
+  const [aberto, setAberto] = useState(dentro);
+  const idDaLista = `submenu-${item.icone}`;
+  return (
+    <div className="flex flex-col gap-xs">
+      <button
+        type="button"
+        aria-expanded={aberto}
+        aria-controls={idDaLista}
+        onClick={() => setAberto((a) => !a)}
+        className={`t-body-m flex items-center gap-md rounded-md px-md py-sm text-left ${
+          dentro ? 'text-primary' : 'text-text-secondary'
+        } hover:bg-elevated/60`}
+      >
+        <IconeDoItem icone={item.icone} />
+        {item.rotulo}
+        <span aria-hidden className={`ml-auto transition-transform ${aberto ? 'rotate-180' : ''}`}>
+          ▾
+        </span>
+      </button>
+      {aberto ? (
+        <ul id={idDaLista} className="flex flex-col gap-xs">
+          {filhos.map((f) => (
+            <li key={f.href}>
+              <Link
+                href={f.href}
+                aria-current={atual === f.href ? 'page' : undefined}
+                className={`t-body-m flex items-center rounded-md py-sm pl-[44px] pr-md ${
+                  atual === f.href
+                    ? 'bg-elevated text-primary'
+                    : 'text-text-secondary hover:bg-elevated/60'
+                }`}
+              >
+                {f.rotulo}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 /** `Sidebar` do Figma (260 px): logo, navegação e rodapé com o admin logado. */
 export function Sidebar({
@@ -129,7 +183,9 @@ export function Sidebar({
       <hr className="border-border" />
       <nav aria-label="Painel" className="flex flex-col gap-xs p-md">
         {ITENS.filter((i) => !i.apenasSuper || papel === 'SUPER_ADMIN').map((i) =>
-          i.emBreve ? (
+          i.filhos ? (
+            <Grupo key={i.href} item={i} filhos={i.filhos} atual={atual} />
+          ) : i.emBreve ? (
             <span
               key={i.href}
               aria-disabled

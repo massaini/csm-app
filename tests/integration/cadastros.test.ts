@@ -12,12 +12,18 @@ import {
   desativarAdmin,
   desativarMotorista,
   editarMotorista,
+  excluirAdmin,
+  excluirBancada,
+  excluirMotorista,
+  excluirRegiao,
   lerConfiguracoes,
   liberarGeofence,
   listarMotoristas,
   reativarMotorista,
   redefinirSenhaDoMotorista,
+  removerBairro,
   renomearAdmin,
+  renomearBairro,
   renomearBancada,
   salvarConfiguracoes,
   transferirSuperAdmin,
@@ -151,6 +157,42 @@ describe('motoristas', () => {
     ]);
     expect(await listarMotoristas(deps(), '')).toHaveLength(2);
   });
+
+  it('RF24-CA9: só o super-admin exclui, e só motorista sem histórico', async () => {
+    const r = await novo();
+    if (!r.ok) throw new Error('falhou');
+    const comum = { id: c.admin.id, papel: 'ADMIN' as const };
+    const superAdmin = { id: c.admin.id, papel: 'SUPER_ADMIN' as const };
+    expect(await excluirMotorista(deps(), comum, r.id)).toEqual({
+      ok: false,
+      erros: { geral: 'Só o super-administrador pode excluir motoristas.' },
+    });
+
+    // com senha no histórico, o caminho é desativar
+    const outro = await novo({ nome: 'Marcos Oliveira', cpf: '11144477735' });
+    if (!outro.ok) throw new Error('falhou');
+    await db.motorista.update({ where: { id: outro.id }, data: { deveTrocarSenha: false } });
+    await gerarSenha(deps(), {
+      motoristaId: outro.id,
+      galpaoId: c.galpao.id,
+      placa: PLACA,
+      leitura: dentro,
+    });
+    expect(await excluirMotorista(deps(), superAdmin, outro.id)).toMatchObject({
+      ok: false,
+      erros: { geral: expect.stringContaining('Use Desativar') },
+    });
+
+    // sem histórico: sai do cadastro, com sessões, e fica na auditoria
+    await login(deps(), { tipo: 'MOTORISTA', cpf: CPF, senha: r.senhaTemporaria, ip: '1.1.1.1' });
+    expect(await excluirMotorista(deps(), superAdmin, r.id)).toEqual({ ok: true });
+    expect(await db.motorista.findUnique({ where: { id: r.id } })).toBeNull();
+    expect(await db.sessao.count({ where: { motoristaId: r.id } })).toBe(0);
+    const aud = await db.auditoria.findFirstOrThrow({
+      where: { acao: 'cadastro.motorista.excluir' },
+    });
+    expect(aud).toMatchObject({ atorId: c.admin.id, alvoId: String(r.id) });
+  });
 });
 
 describe('bancadas, regiões e mapeamento', () => {
@@ -165,14 +207,98 @@ describe('bancadas, regiões e mapeamento', () => {
     expect((await renomearBancada(deps(), c.admin.id, b.id, '07')).ok).toBe(false);
   });
 
-  it('RF25-CA2 / RF25-CA6: cria região com código único', async () => {
+  it('RF25-CA2 / RF25-CA6: código novo cria a região; código existente ganha bairro, sem repetir', async () => {
+    expect(await criarRegiao(deps(), c.admin.id, { codigo: '545', nome: 'Paranapiacaba' })).toEqual(
+      { ok: true, bairroAdicionado: false },
+    );
     expect(
-      (await criarRegiao(deps(), c.admin.id, { codigo: '420', nome: 'ABC Paulista' })).ok,
-    ).toBe(true);
-    expect(await criarRegiao(deps(), c.admin.id, { codigo: '500', nome: 'Repetida' })).toEqual({
-      ok: false,
-      erros: { codigo: 'Já existe uma região com esse código' },
+      await criarRegiao(deps(), c.admin.id, { codigo: '545', nome: 'Represa Billings' }),
+    ).toEqual({ ok: true, bairroAdicionado: true });
+    const r = await db.regiao.findUniqueOrThrow({ where: { codigo: '545' } });
+    expect(r).toMatchObject({
+      bairros: ['Paranapiacaba', 'Represa Billings'],
+      nome: 'Paranapiacaba, Represa Billings',
     });
+    expect(await db.regiao.count({ where: { codigo: '545' } })).toBe(1);
+    // repetido no mesmo código, sem diferença de maiúsculas ou acento
+    expect(
+      await criarRegiao(deps(), c.admin.id, { codigo: '545', nome: 'paranapiacabá' }),
+    ).toEqual({ ok: false, erros: { nome: 'A região 545 já tem o bairro paranapiacabá' } });
+    // região criada antes da lista de bairros: o nome atual conta como o primeiro
+    expect(
+      (await criarRegiao(deps(), c.admin.id, { codigo: '500', nome: 'Vila Assunção' })).ok,
+    ).toBe(true);
+    expect((await db.regiao.findUniqueOrThrow({ where: { codigo: '500' } })).bairros).toEqual([
+      'Centro de Santo André',
+      'Vila Assunção',
+    ]);
+  });
+
+  it('RF25-CA2: renomeia e remove bairro, e a região fica com pelo menos um', async () => {
+    await criarRegiao(deps(), c.admin.id, { codigo: '545', nome: 'Paranapiacaba' });
+    await criarRegiao(deps(), c.admin.id, { codigo: '545', nome: 'Represa' });
+    const r = await db.regiao.findUniqueOrThrow({ where: { codigo: '545' } });
+    expect(await renomearBairro(deps(), c.admin.id, r.id, 'Represa', 'Represa Billings')).toEqual({
+      ok: true,
+    });
+    expect(
+      await renomearBairro(deps(), c.admin.id, r.id, 'Represa Billings', 'Paranapiacaba'),
+    ).toEqual({ ok: false, erros: { nome: 'A região 545 já tem o bairro Paranapiacaba' } });
+    expect(await removerBairro(deps(), c.admin.id, r.id, 'Paranapiacaba')).toEqual({ ok: true });
+    expect(await db.regiao.findUniqueOrThrow({ where: { id: r.id } })).toMatchObject({
+      bairros: ['Represa Billings'],
+      nome: 'Represa Billings',
+    });
+    expect(await removerBairro(deps(), c.admin.id, r.id, 'Represa Billings')).toMatchObject({
+      ok: false,
+      erros: { geral: expect.stringContaining('pelo menos um bairro') },
+    });
+  });
+
+  it('RF25-CA8: exclui bancada e região sem uso; com histórico, mapeamento ou motoristas, bloqueia', async () => {
+    // bancada mapeada: bloqueia e diz qual região
+    expect(await excluirBancada(deps(), c.admin.id, c.bancada.id)).toMatchObject({
+      ok: false,
+      erros: { geral: expect.stringContaining('atende a região 500') },
+    });
+    // bancada com senha no histórico: bloqueia mesmo fora do mapeamento
+    const r = await novo();
+    if (!r.ok) throw new Error('falhou');
+    await db.motorista.update({ where: { id: r.id }, data: { deveTrocarSenha: false } });
+    await gerarSenha(deps(), {
+      motoristaId: r.id,
+      galpaoId: c.galpao.id,
+      placa: PLACA,
+      leitura: dentro,
+    });
+    await db.regiaoBancada.deleteMany({});
+    expect(await excluirBancada(deps(), c.admin.id, c.bancada.id)).toMatchObject({
+      ok: false,
+      erros: { geral: expect.stringContaining('Use Desativar') },
+    });
+    // bancada nova, sem uso: sai
+    const livre = await db.bancada.create({ data: { galpaoId: c.galpao.id, identificacao: '09' } });
+    expect(await excluirBancada(deps(), c.admin.id, livre.id)).toEqual({ ok: true });
+    expect(await db.bancada.findUnique({ where: { id: livre.id } })).toBeNull();
+
+    // região com motorista cadastrado (mesmo inativo): bloqueia
+    await desativarMotorista(deps(), c.admin.id, r.id);
+    expect(await excluirRegiao(deps(), c.admin.id, c.regiao.id)).toMatchObject({
+      ok: false,
+      erros: { geral: expect.stringContaining('1 motorista cadastrado') },
+    });
+    // região sem motoristas: sai junto com o mapeamento; a senha guarda o snapshot
+    await criarRegiao(deps(), c.admin.id, { codigo: '545', nome: 'Paranapiacaba' });
+    const nova = await db.regiao.findUniqueOrThrow({ where: { codigo: '545' } });
+    await definirMapeamento(deps(), c.admin.id, {
+      galpaoId: c.galpao.id,
+      regiaoId: nova.id,
+      bancadaId: c.bancada.id,
+    });
+    expect(await excluirRegiao(deps(), c.admin.id, nova.id)).toEqual({ ok: true });
+    expect(await db.regiao.findUnique({ where: { id: nova.id } })).toBeNull();
+    expect(await db.regiaoBancada.count({ where: { regiaoId: nova.id } })).toBe(0);
+    expect(await db.senha.findFirstOrThrow()).toMatchObject({ regiaoCodigo: '500' });
   });
 
   it('RF25-CA3: mapeia (galpão, região) para uma bancada ativa do galpão, ou nenhuma', async () => {
@@ -350,6 +476,47 @@ describe('administradores', () => {
     });
     const aud = await db.auditoria.findFirstOrThrow({ where: { acao: 'cadastro.admin.renomear' } });
     expect(aud.dados).toMatchObject({ para: 'Marcos Tavares' });
+  });
+
+  it('RF27-CA5: o super-admin exclui admin que nunca atendeu; não exclui a si nem o super', async () => {
+    const s = await db.admin.update({ where: { id: c.admin.id }, data: { papel: 'SUPER_ADMIN' } });
+    expect(await excluirAdmin(deps(), s.id, s.id)).toEqual({
+      ok: false,
+      erros: { geral: 'Você não pode excluir a si mesmo.' },
+    });
+    const novoAdmin = await criarAdmin(deps(), s.id, { nome: 'Ana Souza', cpf: '11144477735' });
+    if (!novoAdmin.ok) throw new Error('falhou');
+
+    // admin que já liberou geração de senha aparece no histórico: bloqueia
+    const m = await novo();
+    if (!m.ok) throw new Error('falhou');
+    await liberarGeofence(deps(), novoAdmin.id, m.id);
+    expect(await excluirAdmin(deps(), s.id, novoAdmin.id)).toMatchObject({
+      ok: false,
+      erros: { geral: expect.stringContaining('Use Desativar') },
+    });
+
+    // sem nada no histórico: sai, e a auditoria antiga dele continua
+    const outro = await criarAdmin(deps(), s.id, { nome: 'Bruno Lima', cpf: '39053344705' });
+    if (!outro.ok) throw new Error('falhou');
+    await renomearAdmin(deps(), s.id, outro.id, 'Bruno Lima Souza');
+    expect(await excluirAdmin(deps(), s.id, outro.id)).toEqual({ ok: true });
+    expect(await db.admin.findUnique({ where: { id: outro.id } })).toBeNull();
+    expect(
+      await db.auditoria.count({ where: { alvoTipo: 'ADMIN', alvoId: String(outro.id) } }),
+    ).toBeGreaterThanOrEqual(3); // criar, renomear e excluir
+  });
+
+  it('RF27-CA5: o super-admin não pode ser excluído', async () => {
+    const s = await db.admin.update({ where: { id: c.admin.id }, data: { papel: 'SUPER_ADMIN' } });
+    const a = await criarAdmin(deps(), s.id, { nome: 'Ana Souza', cpf: '11144477735' });
+    if (!a.ok) throw new Error('falhou');
+    // um super-admin tentando excluir outro super (após transferência) também é barrado
+    await transferirSuperAdmin(deps(), '111.444.777-35');
+    expect(await excluirAdmin(deps(), s.id, a.id)).toEqual({
+      ok: false,
+      erros: { geral: 'O super-admin não pode ser excluído.' },
+    });
   });
 
   it('RF29-CA1: as ações de cadastro ficam na auditoria com o admin que fez', async () => {

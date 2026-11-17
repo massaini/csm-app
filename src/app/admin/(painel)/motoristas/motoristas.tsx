@@ -24,6 +24,7 @@ import type { MotoristaListado } from '@/server/cadastros';
 import {
   alterarAtivoMotorista,
   buscarMotoristas,
+  excluirMotorista,
   liberarGeracaoDeSenha,
   redefinirSenhaMotorista,
   salvarMotorista,
@@ -31,7 +32,31 @@ import {
 
 type Regiao = { id: number; codigo: string; nome: string };
 
-type Pendente = { tipo: 'desativar' | 'redefinir' | 'liberar'; m: MotoristaListado } | null;
+type Pendente = {
+  tipo: 'desativar' | 'redefinir' | 'liberar' | 'excluir';
+  m: MotoristaListado;
+} | null;
+
+const TITULO: Record<NonNullable<Pendente>['tipo'], string> = {
+  desativar: 'Desativar motorista?',
+  redefinir: 'Redefinir senha?',
+  liberar: 'Liberar geração de senha?',
+  excluir: 'Excluir motorista?',
+};
+
+function textoDaConfirmacao(p: NonNullable<Pendente>) {
+  const nome = p.m.nome;
+  switch (p.tipo) {
+    case 'desativar':
+      return `${nome} perde o acesso agora e a senha ativa dele, se houver, é cancelada.`;
+    case 'redefinir':
+      return `${nome} sai de todos os aparelhos e recebe uma senha temporária nova.`;
+    case 'liberar':
+      return `${nome} poderá gerar uma senha sem estar no raio do pátio, até o fim do dia ou até gerar a senha.`;
+    case 'excluir':
+      return `${nome} sai do cadastro. Não dá para desfazer. Se ele já gerou senhas, use Desativar: o histórico precisa dele.`;
+  }
+}
 
 const SITUACOES = ['Ativo', 'Inativo', 'Troca pendente', 'Liberado'] as const;
 
@@ -47,9 +72,12 @@ function situacoes(m: MotoristaListado): string[] {
 export function Motoristas({
   inicial,
   regioes,
+  podeExcluir = false,
 }: {
   inicial: MotoristaListado[];
   regioes: Regiao[];
+  /** RF24-CA9: só o super-admin vê "Excluir" */
+  podeExcluir?: boolean;
 }) {
   const router = useRouter();
   const [lista, setLista] = useState(inicial);
@@ -109,7 +137,15 @@ export function Motoristas({
     const { tipo, m } = pendente;
     setEnviando(true);
     setAviso(null);
+    // a recarga da lista limpa o erro; a recusa da exclusão é mostrada depois dela
+    // `as`: a atribuição acontece dentro do callback, que o TypeScript não acompanha
+    let recusa = null as string | null;
     const ok = await tentar(async () => {
+      if (tipo === 'excluir') {
+        const r = await excluirMotorista(m.id);
+        if (r.ok) setAviso(`${m.nome} foi excluído.`);
+        else recusa = Object.values(r.erros)[0] ?? 'Não foi possível excluir.';
+      }
       if (tipo === 'desativar') await alterarAtivoMotorista(m.id, false);
       if (tipo === 'redefinir') {
         const r = await redefinirSenhaMotorista(m.id);
@@ -125,6 +161,7 @@ export function Motoristas({
     setPendente(null);
     if (!ok) return setErro(FALHA_AO_ENVIAR);
     await recarregar();
+    if (recusa) setErro(recusa);
   }
 
   async function reativar(m: MotoristaListado) {
@@ -257,6 +294,17 @@ export function Motoristas({
                         </ItemDoMenu>
                       </>
                     )}
+                    {podeExcluir ? (
+                      <ItemDoMenu
+                        perigo
+                        aoEscolher={() => {
+                          fechar();
+                          setPendente({ tipo: 'excluir', m });
+                        }}
+                      >
+                        Excluir
+                      </ItemDoMenu>
+                    ) : null}
                   </>
                 )}
               </Menu>
@@ -297,23 +345,17 @@ export function Motoristas({
 
       <Confirmacao
         aberta={pendente !== null}
-        titulo={
+        titulo={pendente ? TITULO[pendente.tipo] : ''}
+        texto={pendente ? textoDaConfirmacao(pendente) : ''}
+        confirmar={
           pendente?.tipo === 'desativar'
-            ? 'Desativar motorista?'
-            : pendente?.tipo === 'redefinir'
-              ? 'Redefinir senha?'
-              : 'Liberar geração de senha?'
+            ? 'Desativar'
+            : pendente?.tipo === 'excluir'
+              ? 'Excluir'
+              : 'Confirmar'
         }
-        texto={
-          pendente?.tipo === 'desativar'
-            ? `${pendente.m.nome} perde o acesso agora e a senha ativa dele, se houver, é cancelada.`
-            : pendente?.tipo === 'redefinir'
-              ? `${pendente?.m.nome} sai de todos os aparelhos e recebe uma senha temporária nova.`
-              : `${pendente?.m.nome ?? ''} poderá gerar uma senha sem estar no raio do pátio, até o fim do dia ou até gerar a senha.`
-        }
-        confirmar={pendente?.tipo === 'desativar' ? 'Desativar' : 'Confirmar'}
         voltar="Cancelar"
-        perigo={pendente?.tipo === 'desativar'}
+        perigo={pendente?.tipo === 'desativar' || pendente?.tipo === 'excluir'}
         pendente={enviando}
         aoFechar={() => setPendente(null)}
         aoConfirmar={() => void confirmar()}

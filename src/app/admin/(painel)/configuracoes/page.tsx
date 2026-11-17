@@ -1,13 +1,6 @@
-import { relogioApp } from '@/server/relogio';
-import { db } from '@/server/db';
-import { lerConfiguracoes } from '@/server/cadastros';
-import { exigirAdmin } from '@/server/http-sessao';
-import { Configuracoes } from './configuracoes';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Configurações · Painel CSM' };
-
-export default async function PaginaConfiguracoes() {
-  await exigirAdmin();
-  const cfg = await lerConfiguracoes({ db, clock: relogioApp });
-  return <Configuracoes inicial={cfg} />;
+/** As configurações ficam no fim da Fila ao Vivo (RF26-CA3); o endereço antigo leva para lá. */
+export default function PaginaConfiguracoes() {
+  redirect('/admin#configuracoes');
 }

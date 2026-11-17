@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.6 — Histórico unificado (P28), busca e filtros das listagens (RF31) |
-| Data | 2026-11-14 |
+| Versão | 0.7 — Ajustes do painel: paginação, exclusões, Bancadas e Regiões separadas, bairros por região (P29, P30) |
+| Data | 2026-11-16 |
 | Escopo | MVP: Fila (app do motorista + painel admin) |
 | Fonte de UI | Figma `TSxGXyq7qLD3K4aCGtfjZD` (protótipo validado pelo cliente) |
 | Status | Aguardando aprovação final |
@@ -102,7 +102,7 @@ Administrador:
 | `Local` | nome, endereço, latitude, longitude, `raioMetros` (padrão 150) |
 | `Galpao` | nome de exibição, endereço, `localId`, `prefixoSenha` (1 letra), ativo |
 | `Bancada` | `galpaoId`, `identificacao` (texto: "07", "A"; única por galpão), ativa |
-| `Regiao` | código ("500", único), nome ("Centro de Santo André"), ativa |
+| `Regiao` | código ("545", único), bairros (lista: "Paranapiacaba", "Represa Billings"; P29), nome (os bairros juntos por ", ", o que as telas e o snapshot mostram), ativa |
 | `RegiaoBancada` | `galpaoId`, `regiaoId` → `bancadaId`; único por (galpão, região) |
 | `Motorista` | nome, CPF (único, só dígitos), hash da senha, `senhaTemporariaExpiraEm`, telefone, `regiaoId`, `deveTrocarSenha`, ativo, `ultimaPlaca`, `ultimoGalpaoId` |
 | `Admin` | nome, CPF (único), hash da senha, `senhaTemporariaExpiraEm`, papel (`ADMIN` \| `SUPER_ADMIN`), `deveTrocarSenha`, ativo |
@@ -367,7 +367,7 @@ Leitura com `enableHighAccuracy: true`, `maximumAge: 0`, `timeout: 15 s`, ao abr
 #### Painel admin
 
 Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
-- **Itens do MVP:** Fila ao Vivo, Histórico de Atendimentos, Histórico de Senhas, Motoristas, Bancadas e Regiões, Configurações e, só para o super-admin, Administradores.
+- **Itens do MVP:** Fila ao Vivo (com as configurações recolhidas no fim, RF26-CA3), Histórico, Motoristas, Bancadas e Regiões (grupo com Bancadas e Regiões, RF25-CA9) e, só para o super-admin, Administradores.
 - **Fases futuras:** Confirmações e Demonstrativos aparecem desabilitados, com "Em breve".
 
 **RF17 — Fila ao Vivo** [`170:26`]
@@ -384,6 +384,7 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RF17-CA8**: mudanças de qualquer usuário aparecem sem recarregar, em até 5 s.
 - **RF17-CA9**: sem senhas ativas, a tela mostra "Nenhum motorista na fila agora".
 - **RF17-CA10**: o subtítulo é "Estado em tempo real · <dia da semana>, <data por extenso> — <hh:mm>", com o relógio do servidor.
+- **RF17-CA11**: paginação de 50 linhas, com a barra "Página X de Y · N registros" sempre visível quando há senhas. A fila inteira vem do servidor (as posições dependem de todas as senhas da bancada); ordenar pelas colunas vale para a fila toda, antes de paginar. Mudar filtro ou ordem volta para a página 1; se a fila encolher, a tela vai para a última página que existe.
 
 **RF18 — Chamar**
 - **RF18-CA1**: muda para CHAMADA e grava `chamadaEm`, `chamadaPorAdminId` e `prazoEm`; registra auditoria.
@@ -406,7 +407,7 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RF20-CA1**: lista as senhas do período em todos os status, com as colunas Data/Hora (`geradaEm`), Senha, Motorista, Galpão, Bancada, Rota, Espera, Tempo total e Status (rótulos da 6.0). Espera e Tempo total mostram "—" quando não se aplicam (sem chamada, cancelada ou `SISTEMA`).
 - **RF20-CA2**: KPIs conforme a 6.0.
 - **RF20-CA3**: período padrão = últimos 7 dias operacionais (inclusive hoje), com filtro de `dia` inclusivo nos dois extremos. O filtro de Período oferece Hoje, Últimos 7 dias, Quinzena atual e um intervalo personalizado. Busca e filtros no padrão do RF31: texto por Nome (padrão) ou Nº da senha; opções de Período, Galpão, Bancada, Rota e Status.
-- **RF20-CA4**: paginação de 50 linhas; ordem padrão da mais recente para a mais antiga; Data/Hora, Senha, Motorista, Galpão, Bancada, Rota e Status podem ser ordenados (no servidor, antes da paginação).
+- **RF20-CA4**: paginação de 50 linhas, com a barra "Página X de Y · N registros" sempre visível quando há senhas (mesmo com uma página só); ordem padrão da mais recente para a mais antiga; Data/Hora, Senha, Motorista, Galpão, Bancada, Rota e Status podem ser ordenados (no servidor, antes da paginação).
 - **RF20-CA5**: sem resultado, mostra "Nenhuma senha no período".
 - **RF20-CA6**: o subtítulo é "<período> · N senhas · X concluídas · Y canceladas", com as contagens do filtro atual.
 - **RF20-CA7**: "Ver histórico", no menu do motorista (RF24-CA8), abre o Histórico filtrado por ele. A URL leva só o id interno do motorista, nunca o CPF.
@@ -432,20 +433,23 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
 - **RF24-CA1**: o cadastro pede nome, CPF, telefone e região. O sistema gera uma senha temporária aleatória de 8 caracteres, mostrada **uma vez** ao admin, e marca `deveTrocarSenha`.
 - **RF24-CA2**: CPF duplicado ou inválido mostra erro no campo.
 - **RF24-CA3**: dá para editar nome, telefone e região. Trocar a região não altera a senha ativa.
-- **RF24-CA4**: desativar e reativar seguem o RF06. Não existe exclusão.
+- **RF24-CA4**: desativar e reativar seguem o RF06.
 - **RF24-CA5**: "Redefinir senha" gera uma nova senha temporária, conforme o RF24-CA1 e o RF06-CA1, e zera o bloqueio de login daquele CPF.
 - **RF24-CA6**: "Liberar geração de senha" cria uma `LiberacaoGeofence` válida até o fim do dia operacional ou até ser usada; a lista mostra "Liberado".
 - **RF24-CA7**: busca e filtros no padrão do RF31: texto por Nome (padrão), CPF ou Telefone; opções de Região e Situação (Ativo, Inativo, Troca pendente, Liberado). O CPF nunca vai na URL.
-- **RF24-CA8**: as ações de cada motorista ficam num menu "⋮" no fim da linha: Editar, Ver histórico, Redefinir senha, Liberar geração de senha e Desativar (ou Reativar). O menu abre e fecha pelo teclado (Enter, setas, Esc) e fecha ao clicar fora.
+- **RF24-CA8**: as ações de cada motorista ficam num menu "⋮" no fim da linha: Editar, Ver histórico, Redefinir senha, Liberar geração de senha e Desativar (ou Reativar), mais Excluir para o super-admin (RF24-CA9). O menu abre e fecha pelo teclado (Enter, setas, Esc) e fecha ao clicar fora.
+- **RF24-CA9**: só o `SUPER_ADMIN` exclui motorista (o servidor confere o papel; um `ADMIN` não vê a opção e recebe erro se chamar a ação). A exclusão pede confirmação e só vale para motorista **sem histórico** (nenhuma senha nem liberação de geofence); com histórico, a mensagem pede para usar Desativar (P30). Sessões e inscrições de push saem junto, e a exclusão fica na auditoria.
 
-**RF25 — Bancadas e Regiões** (uma tela, três blocos)
+**RF25 — Bancadas e Regiões** (duas telas: `/admin/bancadas` e `/admin/regioes`)
 - **RF25-CA1**: bancadas por galpão: adicionar (identificação), renomear, desativar e reativar.
-- **RF25-CA2**: regiões: adicionar (código + nome), renomear, desativar e reativar.
-- **RF25-CA3**: mapeamento: para cada (galpão, região), um select com as bancadas ativas daquele galpão, ou "—" para nenhuma.
+- **RF25-CA2**: regiões: um **código** atende um ou mais **bairros** (P29). Adicionar com código + bairro: código novo cria a região; código existente ganha o bairro. Cada bairro pode ser renomeado ou removido (a região fica com pelo menos um). A região é desativada e reativada como um todo. O `nome` da região, que motorista, histórico e CSV mostram, é a lista de bairros separada por ", ".
+- **RF25-CA3**: mapeamento (na tela de Regiões): para cada (galpão, região), um select com as bancadas ativas daquele galpão, ou "—" para nenhuma.
 - **RF25-CA4**: desativar uma bancada com senhas ativas é bloqueado. Desativar uma região com motoristas ativos também é bloqueado. Nos dois casos a mensagem informa a quantidade.
 - **RF25-CA5**: mudar o mapeamento não altera senhas já geradas.
-- **RF25-CA6**: identificação de bancada repetida no mesmo galpão e código de região repetido mostram erro no campo.
-- **RF25-CA7**: cada card de galpão mostra no máximo 5 bancadas; com mais que isso, aparece "Ver mais (N)", que abre um modal com todas as bancadas do galpão, cada uma com renomear e Desativar/Reativar.
+- **RF25-CA6**: identificação de bancada repetida no mesmo galpão e bairro repetido no mesmo código de região (sem diferenciar maiúsculas nem acentos) mostram erro.
+- **RF25-CA7**: cada card de galpão mostra no máximo 5 bancadas; com mais que isso, aparece "Ver mais (N)", que abre um modal com todas as bancadas do galpão, cada uma com renomear, Desativar/Reativar e Excluir.
+- **RF25-CA8**: Excluir, com confirmação, para bancada e região (P30). Bancada só sai sem histórico de senhas e fora do mapeamento (a mensagem diz quais regiões ela atende). Região só sai sem motoristas cadastrados, ativos ou não; o mapeamento dela sai junto e as senhas já geradas não mudam (snapshot). Nos outros casos, a mensagem pede para usar Desativar.
+- **RF25-CA9**: no menu lateral, "Bancadas e Regiões" é um grupo que abre e fecha no próprio menu, com os subitens Bancadas e Regiões; numa dessas telas ele já vem aberto, com o subitem marcado. O endereço antigo `/admin/bancadas-regioes` leva para Bancadas.
 
 **RF26 — Configurações**
 - **RF26-CA1**: campos editáveis e limites:
@@ -455,12 +459,14 @@ Layout comum (`04 · Administrador`): Sidebar de 260 px + área de conteúdo.
   - `ocupacaoMaxMin` (30–480);
   - `raioMetros` de cada local (50–2000).
 - **RF26-CA2**: cada alteração grava auditoria com o valor anterior e o novo.
+- **RF26-CA3**: não há tela nem item de menu próprio: as configurações ficam numa seção recolhível "Configurações da fila" no fim da Fila ao Vivo, fechada por padrão. O endereço antigo `/admin/configuracoes` leva para `/admin#configuracoes`, com a seção aberta.
 
 **RF27 — Administradores (só super-admin)**
 - **RF27-CA1**: criar (nome + CPF, com senha temporária conforme o RF24-CA1), desativar, reativar e redefinir senha. Desativar e redefinir seguem o RF06-CA1.
 - **RF27-CA2**: um `ADMIN` não vê o menu e recebe 403 nas rotas e ações de administradores.
 - **RF27-CA3**: existe exatamente um `SUPER_ADMIN`, que não pode ser desativado. A transferência é feita pelo comando `npm run admin:transferir-super -- --cpf=<cpf>` (P23). Se o super-admin esquecer a senha ou ficar bloqueado, o comando `npm run admin:redefinir-senha -- --cpf=<cpf>` gera uma senha temporária e zera os bloqueios.
 - **RF27-CA4**: o super-admin edita o nome de qualquer administrador, inclusive o próprio ("Editar nome"), com auditoria. É esse nome que o motorista vê como Conferente (P10).
+- **RF27-CA5**: o super-admin exclui, com confirmação, um administrador que **nunca atendeu** (sem chamadas, chegadas, conclusões nem liberações de geofence); com histórico, a mensagem pede para usar Desativar (P30). Não exclui a si mesmo nem o `SUPER_ADMIN`. As sessões saem junto; a auditoria guarda só o id do ator, então os registros antigos continuam.
 
 **RF28 — Virada do dia**
 - **RF28-CA1**: a cada execução do job (9.2), com `inícioDoDia` = início do dia operacional atual:
@@ -630,8 +636,10 @@ Todas as métricas saem do banco, exceto a adoção.
 | `/admin` | Fila ao Vivo | `170:26` |
 | `/admin/historico` | Histórico (senhas e atendimentos) | `171:95`, `172:170` |
 | `/admin/motoristas` | Motoristas | — |
-| `/admin/bancadas-regioes` | Bancadas e Regiões | — |
-| `/admin/configuracoes` | Configurações | — |
+| `/admin/bancadas` | Bancadas (subitem de "Bancadas e Regiões") | — |
+| `/admin/regioes` | Regiões e mapeamento (subitem de "Bancadas e Regiões") | — |
+| `/admin/bancadas-regioes` | redireciona para `/admin/bancadas` | — |
+| `/admin/configuracoes` | redireciona para `/admin#configuracoes` (seção da Fila ao Vivo) | — |
 | `/admin/administradores` | Administradores | — |
 | `/api/stream`, `/api/fila/estado` | SSE e estado | — |
 
@@ -663,9 +671,9 @@ Regra: **todo CA tem um teste com o ID no nome** (ex.: `it('RF13-CA2: aceita Est
 
 | Camada | CAs |
 |---|---|
-| **Unit** (Vitest, `Clock` falso) | Toda a 6.0 (fórmulas, KPIs, arredondamento, dia operacional e quinzena, incluindo 23:30 de São Paulo, código, transições, status efetivo). RF01-CA5 · RF05-CA5 · RF08-CA1 · RF09-CA1, CA2, CA3, CA6 · RF11-CA1 · RF13-CA1, CA7 · RF22-CA3, CA4 · RNF04-CA4 |
-| **Integração** (Vitest + Postgres, `Clock` falso) | RF01-CA2, CA3, CA4 · RF02-CA1, CA2, CA4 · RF03-CA1, CA2 · RF04-CA1, CA2 · RF05-CA2 · RF06-CA1, CA2, CA3 · RF07-CA1, CA2, CA3, CA4 · RF08-CA2, CA3, CA4, CA5 · RF09-CA5, CA7, CA8 · RF10-CA1 a CA7 · RF12-CA2, CA3 · RF13-CA2, CA3, CA5, CA6 · RF15-CA1, CA2 · RF17-CA1, CA2, CA3, CA4, CA6, CA7 · RF18-CA1 a CA6 · RF19-CA1, CA2, CA3 · RF20-CA1, CA2, CA3, CA4, CA6 · RF22-CA2, CA5 · RF24-CA1 a CA7 · RF31-CA1, CA2, CA3 · RF25-CA1 a CA6 · RF26-CA1, CA2 · RF27-CA1, CA2, CA3, CA4 · RF28-CA1, CA2, CA3 · RF29-CA1 · RF30-CA3 · RNF01-CA2 · RNF02-CA1, CA2, CA3, CA4 · RNF06-CA1 |
-| **E2E** (Playwright, 2 contextos, `setGeolocation`) | RF01-CA1, CA6 · RF02-CA3 · RF04-CA3 · RF05-CA1, CA3, CA6 · RF08-CA6 · RF09-CA4 · RF11-CA2, CA3, CA4 · RF12-CA1 · RF13-CA4 · RF14-CA1 a CA6 · RF15-CA3, CA4 · RF16-CA1, CA2 · RF17-CA5, CA8, CA9, CA10 · RF20-CA5, CA7 · RF24-CA8 · RF25-CA7 · RF31-CA4 · RF22-CA1 · RF23-CA2, CA3 · RF30-CA1, CA2 · RNF01-CA1 · RNF04-CA1, CA2 |
+| **Unit** (Vitest, `Clock` falso) | Toda a 6.0 (fórmulas, KPIs, arredondamento, dia operacional e quinzena, incluindo 23:30 de São Paulo, código, transições, status efetivo). RF01-CA5 · RF05-CA5 · RF08-CA1 · RF09-CA1, CA2, CA3, CA6 · RF11-CA1 · RF13-CA1, CA7 · RF17-CA11 · RF22-CA3, CA4 · RNF04-CA4 |
+| **Integração** (Vitest + Postgres, `Clock` falso) | RF01-CA2, CA3, CA4 · RF02-CA1, CA2, CA4 · RF03-CA1, CA2 · RF04-CA1, CA2 · RF05-CA2 · RF06-CA1, CA2, CA3 · RF07-CA1, CA2, CA3, CA4 · RF08-CA2, CA3, CA4, CA5 · RF09-CA5, CA7, CA8 · RF10-CA1 a CA7 · RF12-CA2, CA3 · RF13-CA2, CA3, CA5, CA6 · RF15-CA1, CA2 · RF17-CA1, CA2, CA3, CA4, CA6, CA7 · RF18-CA1 a CA6 · RF19-CA1, CA2, CA3 · RF20-CA1, CA2, CA3, CA4, CA6 · RF22-CA2, CA5 · RF24-CA1 a CA7, CA9 · RF31-CA1, CA2, CA3 · RF25-CA1 a CA6, CA8 · RF26-CA1, CA2 · RF27-CA1, CA2, CA3, CA4, CA5 · RF28-CA1, CA2, CA3 · RF29-CA1 · RF30-CA3 · RNF01-CA2 · RNF02-CA1, CA2, CA3, CA4 · RNF06-CA1 |
+| **E2E** (Playwright, 2 contextos, `setGeolocation`) | RF01-CA1, CA6 · RF02-CA3 · RF04-CA3 · RF05-CA1, CA3, CA6 · RF08-CA6 · RF09-CA4 · RF11-CA2, CA3, CA4 · RF12-CA1 · RF13-CA4 · RF14-CA1 a CA6 · RF15-CA3, CA4 · RF16-CA1, CA2 · RF17-CA5, CA8, CA9, CA10 · RF20-CA5, CA7 · RF24-CA8 · RF25-CA7, CA9 · RF26-CA3 · RF31-CA4 · RF22-CA1 · RF23-CA2, CA3 · RF30-CA1, CA2 · RNF01-CA1 · RNF04-CA1, CA2 |
 | **Carga** (`test:load`) | RNF01-CA3 |
 | **Manual** (`docs/checklist-manual.md`) | RF05-CA4 · RF23-CA1 · RNF01-CA4 · RNF02-CA5 · RNF04-CA3, com push e instalação reais em 1 Android e 1 iPhone |
 
@@ -819,6 +827,8 @@ Cada linha traz o que o texto acima adota. As marcadas com **✔** foram confirm
 | P26 | B18 | Quantos motoristas cadastrados e qual o pico simultâneo? | **✔** em média 180 motoristas; o pico simultâneo não foi informado, então o teste de carga usa 50 conexões (folga sobre o maior galpão, ~71 atendimentos/dia) |
 | P27 | B28 | Média diária de atendimentos em DS SDE e SP-R-D228? | a CSM informa antes do go-live; não bloqueia o desenvolvimento |
 | P28 | — | Precisamos de duas telas de histórico (senhas e atendimentos)? | **✔** unificar em "Histórico" com filtro de Status; o motorista ganha "Ver histórico" (decisão do responsável pelo produto, 2026-11-14) |
+| P29 | — | O mesmo código de região pode atender bairros diferentes (545 · Paranapiacaba e 545 · Represa Billings)? | **✔** sim: o código é único e guarda uma lista de bairros; adicionar um bairro a um código existente não cria outra região (decisão do responsável pelo produto, 2026-11-16) |
+| P30 | — | Excluir cadastros que já têm histórico? | **✔** não: motorista, administrador, bancada e região só são excluídos sem histórico; com histórico, o caminho é Desativar (decisão do responsável pelo produto, 2026-11-16) |
 
 ---
 
@@ -832,6 +842,7 @@ Cada linha traz o que o texto acima adota. As marcadas com **✔** foram confirm
 | 0.4 | 2026-11-10 | Segunda revisão adversarial (29 achados). P16, P18 e P19 confirmadas. Perda de vez só depois da carência; escritas persistem a expiração; contrato `CONFLITO` das mutações; `/admin/trocar-senha`; seed só cria; virada com predicados exatos; `HORA_VIRADA` vira variável de ambiente; KPIs e filtros fechados; 9.6 lista todos os CAs por camada; novos CAs (RF04-CA3, RF08-CA6, RF10-CA6/CA7, RF17-CA10, RF18-CA6, RF20-CA6, RF21-CA5, RF23-CA3, RF25-CA6, RNF06-CA1); P25–P27. |
 | 0.5 | 2026-11-11 | P25 confirmada: bancada atende um por vez, então chamar para bancada ocupada é bloqueado (RF18-CA6, RF17-CA5) em vez de apenas avisar. P26: 180 motoristas. |
 | 0.6 | 2026-11-14 | Pedidos pós-revisão: Histórico unificado (RF20, P28; RF21 incorporado), RF31 (busca, filtros e ordenação das listagens), menu "⋮" de Motoristas (RF24-CA8), edição do nome do admin (RF27-CA4), checklist de revisão do front end (§13). |
+| 0.7 | 2026-11-16 | Ajustes pedidos para o painel: paginação na Fila ao Vivo (RF17-CA11) e barra de paginação sempre visível no Histórico (RF20-CA4); excluir motorista só pelo super-admin (RF24-CA9), excluir bancada e região (RF25-CA8) e excluir administrador (RF27-CA5), sempre sem histórico (P30); Bancadas e Regiões em duas telas com grupo no menu lateral (RF25-CA9); região com vários bairros por código (RF25-CA2, RF25-CA6, P29; coluna `Regiao.bairros`); Configurações vira seção da Fila ao Vivo (RF26-CA3). |
 
 ---
 

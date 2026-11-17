@@ -88,7 +88,14 @@ model Bancada {
 model Regiao {
   id          Int             @id @default(autoincrement())
   codigo      String          @unique
+  /**
+   * bairros juntos por ", " (o que motorista, histórico e CSV mostram); mantido por `bairros`
+   */
   nome        String
+  /**
+   * bairros atendidos por este código (P29): "545" → Paranapiacaba, Represa Billings
+   */
+  bairros     String[]        @default([])
   ativa       Boolean         @default(true)
   mapeamentos RegiaoBancada[]
   motoristas  Motorista[]

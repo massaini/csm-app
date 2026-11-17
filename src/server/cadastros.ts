@@ -197,7 +197,41 @@ export async function liberarGeofence(deps: AuthDeps, adminId: number, motorista
   return l;
 }
 
+/**
+ * RF24-CA9 — só o super-admin exclui, e só quem não tem histórico (senhas ou liberações);
+ * quem tem, é desativado. Sessões e inscrições de push caem junto (cascata).
+ */
+export async function excluirMotorista(
+  deps: AuthDeps,
+  ator: { id: number; papel: 'ADMIN' | 'SUPER_ADMIN' },
+  id: number,
+): Promise<Resultado> {
+  if (ator.papel !== 'SUPER_ADMIN') {
+    return falha({ geral: 'Só o super-administrador pode excluir motoristas.' });
+  }
+  const m = await deps.db.motorista.findUnique({
+    where: { id },
+    include: { _count: { select: { senhas: true, liberacoes: true } } },
+  });
+  if (!m) return { ok: true };
+  if (m._count.senhas + m._count.liberacoes > 0) {
+    return falha({
+      geral: `Não é possível excluir: ${m.nome} já tem histórico de senhas. Use Desativar.`,
+    });
+  }
+  await deps.db.motorista.delete({ where: { id } });
+  await auditar(deps, ator.id, 'cadastro.motorista.excluir', 'MOTORISTA', id, { nome: m.nome });
+  return { ok: true };
+}
+
 /* ----------------------------------------------------- Bancadas e Regiões (RF25) */
+
+/** Regiões antigas (ou criadas direto no banco) podem não ter a lista: o nome vale como bairro. */
+const bairrosDe = (r: { nome: string; bairros: string[] }) =>
+  r.bairros.length ? r.bairros : [r.nome];
+const nomeDosBairros = (bairros: string[]) => bairros.join(', ');
+const mesmoBairro = (a: string, b: string) =>
+  a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }) === 0;
 
 export async function dadosBancadasRegioes(deps: AuthDeps) {
   const [galpoes, regioes, mapeamentos] = await Promise.all([
@@ -218,7 +252,13 @@ export async function dadosBancadasRegioes(deps: AuthDeps) {
         ativa: b.ativa,
       })),
     })),
-    regioes: regioes.map((r) => ({ id: r.id, codigo: r.codigo, nome: r.nome, ativa: r.ativa })),
+    regioes: regioes.map((r) => ({
+      id: r.id,
+      codigo: r.codigo,
+      nome: r.nome,
+      bairros: bairrosDe(r),
+      ativa: r.ativa,
+    })),
     mapa: Object.fromEntries(mapeamentos.map((m) => [`${m.galpaoId}:${m.regiaoId}`, m.bancadaId])),
   };
 }
@@ -293,40 +333,180 @@ export async function alternarBancada(
   return { ok: true };
 }
 
+/**
+ * RF25-CA8 — exclui só bancada sem histórico de senhas e fora do mapeamento; senão, a
+ * mensagem diz o motivo (com histórico, o caminho é Desativar).
+ */
+export async function excluirBancada(
+  deps: AuthDeps,
+  adminId: number,
+  bancadaId: number,
+): Promise<Resultado> {
+  const b = await deps.db.bancada.findUnique({
+    where: { id: bancadaId },
+    include: {
+      _count: { select: { senhas: true } },
+      mapeamentos: { include: { regiao: { select: { codigo: true } } } },
+    },
+  });
+  if (!b) return { ok: true };
+  if (b._count.senhas > 0) {
+    return falha({
+      geral: `Não é possível excluir: a bancada ${b.identificacao} já tem histórico de senhas. Use Desativar.`,
+    });
+  }
+  if (b.mapeamentos.length > 0) {
+    const codigos = b.mapeamentos.map((m) => m.regiao.codigo).join(', ');
+    return falha({
+      geral: `Não é possível excluir: a bancada ${b.identificacao} atende ${
+        b.mapeamentos.length === 1 ? 'a região' : 'as regiões'
+      } ${codigos}. Troque o mapeamento em Regiões antes.`,
+    });
+  }
+  await deps.db.bancada.delete({ where: { id: bancadaId } });
+  await auditar(deps, adminId, 'cadastro.bancada.excluir', 'BANCADA', bancadaId, {
+    galpaoId: b.galpaoId,
+    identificacao: b.identificacao,
+  });
+  return { ok: true };
+}
+
 const esquemaRegiao = z.object({
   codigo: z.string().trim().min(1, 'Informe o código').max(10),
-  nome: z.string().trim().min(2, 'Informe o nome').max(80),
+  nome: z.string().trim().min(2, 'Informe o bairro').max(80),
 });
 
+/**
+ * RF25-CA2 / RF25-CA6 — código novo cria a região; código existente ganha mais um bairro
+ * (P29). Bairro repetido no mesmo código é erro.
+ */
 export async function criarRegiao(
   deps: AuthDeps,
   adminId: number,
   entrada: { codigo: string; nome: string },
-): Promise<Resultado> {
+): Promise<Resultado<{ bairroAdicionado: boolean }>> {
   const v = esquemaRegiao.safeParse(entrada);
   if (!v.success) return falha(errosDoZod(v.error));
+  const { codigo, nome: bairro } = v.data;
+  const existente = await deps.db.regiao.findUnique({ where: { codigo } });
+  if (existente) {
+    const atuais = bairrosDe(existente);
+    if (atuais.some((b) => mesmoBairro(b, bairro))) {
+      return falha({ nome: `A região ${codigo} já tem o bairro ${bairro}` });
+    }
+    const bairros = [...atuais, bairro];
+    await deps.db.regiao.update({
+      where: { id: existente.id },
+      data: { bairros, nome: nomeDosBairros(bairros) },
+    });
+    await auditar(deps, adminId, 'cadastro.regiao.adicionar_bairro', 'REGIAO', existente.id, {
+      bairro,
+    });
+    return { ok: true, bairroAdicionado: true };
+  }
   try {
-    const r = await deps.db.regiao.create({ data: v.data });
+    const r = await deps.db.regiao.create({ data: { codigo, nome: bairro, bairros: [bairro] } });
     await auditar(deps, adminId, 'cadastro.regiao.criar', 'REGIAO', r.id);
-    return { ok: true };
+    return { ok: true, bairroAdicionado: false };
   } catch (e) {
+    // outro admin criou o mesmo código no meio do caminho
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-      return falha({ codigo: 'Já existe uma região com esse código' });
+      return falha({ codigo: 'Esse código acabou de ser cadastrado. Tente de novo.' });
     }
     throw e;
   }
 }
 
-export async function renomearRegiao(
+async function gravarBairros(deps: AuthDeps, regiaoId: number, bairros: string[]) {
+  await deps.db.regiao.update({
+    where: { id: regiaoId },
+    data: { bairros, nome: nomeDosBairros(bairros) },
+  });
+}
+
+/** RF25-CA2 — renomeia um bairro da região; a senha já gerada guarda o nome antigo. */
+export async function renomearBairro(
   deps: AuthDeps,
   adminId: number,
   regiaoId: number,
-  nome: string,
+  de: string,
+  para: string,
 ): Promise<Resultado> {
-  const v = esquemaRegiao.shape.nome.safeParse(nome);
+  const v = esquemaRegiao.shape.nome.safeParse(para);
   if (!v.success) return falha({ nome: v.error.issues[0].message });
-  await deps.db.regiao.update({ where: { id: regiaoId }, data: { nome: v.data } });
-  await auditar(deps, adminId, 'cadastro.regiao.renomear', 'REGIAO', regiaoId, { nome: v.data });
+  const r = await deps.db.regiao.findUniqueOrThrow({ where: { id: regiaoId } });
+  const atuais = bairrosDe(r);
+  const i = atuais.indexOf(de);
+  if (i < 0) return falha({ geral: 'Esse bairro não existe mais. Recarregue a página.' });
+  if (atuais.some((b, j) => j !== i && mesmoBairro(b, v.data))) {
+    return falha({ nome: `A região ${r.codigo} já tem o bairro ${v.data}` });
+  }
+  await gravarBairros(
+    deps,
+    regiaoId,
+    atuais.map((b, j) => (j === i ? v.data : b)),
+  );
+  await auditar(deps, adminId, 'cadastro.regiao.renomear_bairro', 'REGIAO', regiaoId, {
+    de,
+    para: v.data,
+  });
+  return { ok: true };
+}
+
+/** RF25-CA2 — tira um bairro; a região precisa ficar com pelo menos um. */
+export async function removerBairro(
+  deps: AuthDeps,
+  adminId: number,
+  regiaoId: number,
+  bairro: string,
+): Promise<Resultado> {
+  const r = await deps.db.regiao.findUniqueOrThrow({ where: { id: regiaoId } });
+  const atuais = bairrosDe(r);
+  if (!atuais.includes(bairro)) return { ok: true };
+  if (atuais.length === 1) {
+    return falha({
+      geral: `A região ${r.codigo} precisa de pelo menos um bairro. Para tirar a região, use Excluir ou Desativar.`,
+    });
+  }
+  await gravarBairros(
+    deps,
+    regiaoId,
+    atuais.filter((b) => b !== bairro),
+  );
+  await auditar(deps, adminId, 'cadastro.regiao.remover_bairro', 'REGIAO', regiaoId, { bairro });
+  return { ok: true };
+}
+
+/**
+ * RF25-CA8 — exclui só região sem motoristas cadastrados (ativos ou não); o mapeamento dela
+ * sai junto. As senhas guardam código e nome no snapshot, então o histórico não muda.
+ */
+export async function excluirRegiao(
+  deps: AuthDeps,
+  adminId: number,
+  regiaoId: number,
+): Promise<Resultado> {
+  const r = await deps.db.regiao.findUnique({
+    where: { id: regiaoId },
+    include: { _count: { select: { motoristas: true } } },
+  });
+  if (!r) return { ok: true };
+  const n = r._count.motoristas;
+  if (n > 0) {
+    return falha({
+      geral: `Não é possível excluir: há ${n} ${
+        n === 1 ? 'motorista cadastrado' : 'motoristas cadastrados'
+      } na região ${r.codigo}. Troque a região deles ou use Desativar.`,
+    });
+  }
+  await deps.db.$transaction([
+    deps.db.regiaoBancada.deleteMany({ where: { regiaoId } }),
+    deps.db.regiao.delete({ where: { id: regiaoId } }),
+  ]);
+  await auditar(deps, adminId, 'cadastro.regiao.excluir', 'REGIAO', regiaoId, {
+    codigo: r.codigo,
+    nome: r.nome,
+  });
   return { ok: true };
 }
 
@@ -514,6 +694,36 @@ export async function desativarAdmin(
 export async function reativarAdmin(deps: AuthDeps, superId: number, id: number) {
   await deps.db.admin.update({ where: { id }, data: { ativo: true } });
   await auditar(deps, superId, 'cadastro.admin.reativar', 'ADMIN', id);
+}
+
+/**
+ * RF27-CA5 — o super-admin exclui um admin que nunca atendeu (sem chamadas, chegadas,
+ * conclusões nem liberações). Não exclui a si mesmo nem o super-admin. A auditoria guarda
+ * só o id do ator, então os registros antigos continuam.
+ */
+export async function excluirAdmin(
+  deps: AuthDeps,
+  superId: number,
+  id: number,
+): Promise<Resultado> {
+  if (id === superId) return falha({ geral: 'Você não pode excluir a si mesmo.' });
+  const a = await deps.db.admin.findUnique({
+    where: { id },
+    include: {
+      _count: { select: { chamadas: true, chegadas: true, conclusoes: true, liberacoes: true } },
+    },
+  });
+  if (!a) return { ok: true };
+  if (a.papel === 'SUPER_ADMIN') return falha({ geral: 'O super-admin não pode ser excluído.' });
+  const { chamadas, chegadas, conclusoes, liberacoes } = a._count;
+  if (chamadas + chegadas + conclusoes + liberacoes > 0) {
+    return falha({
+      geral: `Não é possível excluir: ${a.nome} já atendeu motoristas e aparece no histórico. Use Desativar.`,
+    });
+  }
+  await deps.db.admin.delete({ where: { id } });
+  await auditar(deps, superId, 'cadastro.admin.excluir', 'ADMIN', id, { nome: a.nome });
+  return { ok: true };
 }
 
 /** RF27-CA4 — o super-admin corrige o nome de qualquer admin (é o nome exibido como Conferente). */

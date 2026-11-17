@@ -261,6 +261,24 @@ export function Tabela({
   );
 }
 
+/**
+ * Recorta uma lista já ordenada em páginas (RF17-CA11). Se a lista encolher e a página pedida
+ * deixar de existir, devolve a última.
+ */
+export function paginar<T>(itens: T[], pagina: number, porPagina: number) {
+  const paginas = Math.max(1, Math.ceil(itens.length / porPagina));
+  const atual = Math.min(Math.max(1, pagina), paginas);
+  return {
+    linhas: itens.slice((atual - 1) * porPagina, atual * porPagina),
+    pagina: atual,
+    paginas,
+  };
+}
+
+/**
+ * Barra de paginação das tabelas do painel (RF17-CA11, RF20-CA4). Aparece sempre que há
+ * registros, mesmo com uma página só, para o admin ver o total e saber que a lista é paginada.
+ */
 export function Paginacao({
   pagina,
   paginas,
@@ -272,13 +290,17 @@ export function Paginacao({
   total: number;
   aoMudar: (p: number) => void;
 }) {
-  if (paginas <= 1) return null;
+  if (total === 0) return null;
   return (
-    <div className="t-body-s mt-base flex items-center justify-end gap-md text-text-secondary">
+    <nav
+      aria-label="Paginação"
+      className="t-body-s mt-base flex items-center justify-end gap-md text-text-secondary"
+    >
       <span>
-        Página {pagina} de {paginas} · {total} registros
+        Página {pagina} de {paginas} · {total} {total === 1 ? 'registro' : 'registros'}
       </span>
       <button
+        type="button"
         className="rounded-md border border-border px-md py-xs disabled:opacity-40"
         disabled={pagina <= 1}
         onClick={() => aoMudar(pagina - 1)}
@@ -286,13 +308,14 @@ export function Paginacao({
         Anterior
       </button>
       <button
+        type="button"
         className="rounded-md border border-border px-md py-xs disabled:opacity-40"
         disabled={pagina >= paginas}
         onClick={() => aoMudar(pagina + 1)}
       >
         Próxima
       </button>
-    </div>
+    </nav>
   );
 }
 

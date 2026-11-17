@@ -49,8 +49,20 @@ test('FE-05: os links das telas do motorista levam a rotas que existem', async (
 test('FE-05: os links do painel levam a rotas que existem', async ({ browser }) => {
   const admin = await (await contextoAdmin(browser)).newPage();
   await entrarAdmin(admin);
-  const links = await conferirLinks(admin, ['/admin']);
-  expect(links.size).toBe(6); // as 6 telas da barra lateral do super-admin
+  // em Bancadas o grupo "Bancadas e Regiões" já vem aberto, com os dois subitens visíveis
+  const links = await conferirLinks(admin, ['/admin/bancadas']);
+  // as 6 telas da barra lateral do super-admin: Fila ao Vivo, Histórico, Motoristas,
+  // Bancadas, Regiões e Administradores
+  expect([...links].sort()).toEqual(
+    [
+      '/admin',
+      '/admin/administradores',
+      '/admin/bancadas',
+      '/admin/historico',
+      '/admin/motoristas',
+      '/admin/regioes',
+    ].sort(),
+  );
 });
 
 test('FE-05: rota inexistente mostra a página 404 em português com volta ao início', async ({
