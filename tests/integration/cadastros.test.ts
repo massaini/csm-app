@@ -221,9 +221,9 @@ describe('bancadas, regiões e mapeamento', () => {
     });
     expect(await db.regiao.count({ where: { codigo: '545' } })).toBe(1);
     // repetido no mesmo código, sem diferença de maiúsculas ou acento
-    expect(
-      await criarRegiao(deps(), c.admin.id, { codigo: '545', nome: 'paranapiacabá' }),
-    ).toEqual({ ok: false, erros: { nome: 'A região 545 já tem o bairro paranapiacabá' } });
+    expect(await criarRegiao(deps(), c.admin.id, { codigo: '545', nome: 'paranapiacabá' })).toEqual(
+      { ok: false, erros: { nome: 'A região 545 já tem o bairro paranapiacabá' } },
+    );
     // região criada antes da lista de bairros: o nome atual conta como o primeiro
     expect(
       (await criarRegiao(deps(), c.admin.id, { codigo: '500', nome: 'Vila Assunção' })).ok,
@@ -232,6 +232,31 @@ describe('bancadas, regiões e mapeamento', () => {
       'Centro de Santo André',
       'Vila Assunção',
     ]);
+  });
+
+  it('RF25-CA2: região sem lista de bairros (nula no banco) usa o nome como bairro, sem quebrar', async () => {
+    await db.$executeRaw`UPDATE "Regiao" SET bairros = NULL WHERE id = ${c.regiao.id}`;
+    const d = await dadosBancadasRegioes(deps());
+    expect(d.regioes.find((r) => r.id === c.regiao.id)?.bairros).toEqual(['Centro de Santo André']);
+    expect(await criarRegiao(deps(), c.admin.id, { codigo: '500', nome: 'Vila Assunção' })).toEqual(
+      { ok: true, bairroAdicionado: true },
+    );
+    expect((await db.regiao.findUniqueOrThrow({ where: { id: c.regiao.id } })).bairros).toEqual([
+      'Centro de Santo André',
+      'Vila Assunção',
+    ]);
+  });
+
+  it('RF25-CA2: dois admins adicionando bairros ao mesmo código ao mesmo tempo não perdem nenhum', async () => {
+    const bairros = ['Paranapiacaba', 'Represa Billings', 'Campo Grande', 'Rio Grande'];
+    // código novo: as quatro chamadas disputam quem cria; as outras acrescentam o bairro
+    const r = await Promise.all(
+      bairros.map((nome) => criarRegiao(deps(), c.admin.id, { codigo: '545', nome })),
+    );
+    expect(r.every((x) => x.ok)).toBe(true);
+    const regiao = await db.regiao.findUniqueOrThrow({ where: { codigo: '545' } });
+    expect([...regiao.bairros].sort()).toEqual([...bairros].sort());
+    expect(regiao.nome.split(', ').sort()).toEqual([...bairros].sort());
   });
 
   it('RF25-CA2: renomeia e remove bairro, e a região fica com pelo menos um', async () => {

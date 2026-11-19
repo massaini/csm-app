@@ -28,6 +28,18 @@ npm run db:seed           # cria locais, galpões, configuração e o super-admi
 npx next dev              # http://localhost:3000 (motorista) e /admin/login (painel)
 ```
 
+**Depois de cada `git pull`** (mesmo com o `npm install` já feito antes), pare o `next dev` e rode:
+
+```bash
+npm install               # regera o cliente do Prisma (src/generated fica fora do git)
+npm run db:deploy         # aplica migrações novas no seu banco local
+npx next dev
+```
+
+Sem isso, o cliente do Prisma continua o antigo e não conhece colunas novas: foi o que aconteceu
+com `Regiao.bairros` (erro `Cannot read properties of undefined (reading 'length')` em Bancadas).
+Se só o `db:deploy` faltar, o erro é `column ... does not exist`.
+
 Verificação completa (precisa passar antes de qualquer commit de código):
 
 ```bash

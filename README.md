@@ -26,4 +26,7 @@ npm run db:deploy && npm run db:seed
 npx next dev
 ```
 
+Depois de cada `git pull`, rode de novo `npm install` (regera o cliente do Prisma) e
+`npm run db:deploy` (aplica migrações novas) antes do `npx next dev`.
+
 Detalhes, variáveis de ambiente e comandos de teste em [docs/ANDAMENTO.md](docs/ANDAMENTO.md).

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Prisma } from '@/generated/prisma/client';
+import { Prisma, type Regiao } from '@/generated/prisma/client';
 import { limitesDoDia } from '@/domain/dia';
 import { cpfValido, somenteDigitos } from '@/domain/documentos';
 import {
@@ -18,6 +18,28 @@ export type Erros = Record<string, string>;
 export type Resultado<T = object> = ({ ok: true } & T) | { ok: false; erros: Erros };
 
 const falha = (erros: Erros): { ok: false; erros: Erros } => ({ ok: false, erros });
+
+/**
+ * Exclusões (P30): a checagem de histórico e o DELETE não são atômicos. Se algo passar a usar
+ * o cadastro no meio (uma senha gerada naquele instante, por exemplo), a chave estrangeira
+ * recusa (P2003) e a resposta é a mesma do bloqueio, em vez de um erro genérico. Registro que
+ * já não existe (P2025, outro admin excluiu antes) conta como excluído.
+ */
+async function excluirOuRecusar(
+  apagar: () => Promise<unknown>,
+  recusa: string,
+): Promise<Resultado> {
+  try {
+    await apagar();
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      if (e.code === 'P2025') return { ok: true };
+      if (e.code === 'P2003') return falha({ geral: recusa });
+    }
+    throw e;
+  }
+}
 
 async function auditar(
   deps: AuthDeps,
@@ -214,21 +236,24 @@ export async function excluirMotorista(
     include: { _count: { select: { senhas: true, liberacoes: true } } },
   });
   if (!m) return { ok: true };
-  if (m._count.senhas + m._count.liberacoes > 0) {
-    return falha({
-      geral: `Não é possível excluir: ${m.nome} já tem histórico de senhas. Use Desativar.`,
-    });
+  const recusa = `Não é possível excluir: ${m.nome} já tem histórico de senhas. Use Desativar.`;
+  if (m._count.senhas + m._count.liberacoes > 0) return falha({ geral: recusa });
+  const r = await excluirOuRecusar(() => deps.db.motorista.delete({ where: { id } }), recusa);
+  if (r.ok) {
+    await auditar(deps, ator.id, 'cadastro.motorista.excluir', 'MOTORISTA', id, { nome: m.nome });
   }
-  await deps.db.motorista.delete({ where: { id } });
-  await auditar(deps, ator.id, 'cadastro.motorista.excluir', 'MOTORISTA', id, { nome: m.nome });
-  return { ok: true };
+  return r;
 }
 
 /* ----------------------------------------------------- Bancadas e Regiões (RF25) */
 
-/** Regiões antigas (ou criadas direto no banco) podem não ter a lista: o nome vale como bairro. */
-const bairrosDe = (r: { nome: string; bairros: string[] }) =>
-  r.bairros.length ? r.bairros : [r.nome];
+/**
+ * Regiões antigas (ou criadas direto no banco) podem não ter a lista: o nome vale como bairro.
+ * Aceita `null`/ausente porque a coluna é anulável no Postgres (lista escalar do Prisma) e um
+ * cliente Prisma desatualizado (sem `prisma generate` depois do pull) nem traz o campo.
+ */
+const bairrosDe = (r: { nome: string; bairros?: string[] | null }) =>
+  r.bairros?.length ? r.bairros : [r.nome];
 const nomeDosBairros = (bairros: string[]) => bairros.join(', ');
 const mesmoBairro = (a: string, b: string) =>
   a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }) === 0;
@@ -350,11 +375,8 @@ export async function excluirBancada(
     },
   });
   if (!b) return { ok: true };
-  if (b._count.senhas > 0) {
-    return falha({
-      geral: `Não é possível excluir: a bancada ${b.identificacao} já tem histórico de senhas. Use Desativar.`,
-    });
-  }
+  const recusa = `Não é possível excluir: a bancada ${b.identificacao} já tem histórico de senhas. Use Desativar.`;
+  if (b._count.senhas > 0) return falha({ geral: recusa });
   if (b.mapeamentos.length > 0) {
     const codigos = b.mapeamentos.map((m) => m.regiao.codigo).join(', ');
     return falha({
@@ -363,18 +385,54 @@ export async function excluirBancada(
       } ${codigos}. Troque o mapeamento em Regiões antes.`,
     });
   }
-  await deps.db.bancada.delete({ where: { id: bancadaId } });
-  await auditar(deps, adminId, 'cadastro.bancada.excluir', 'BANCADA', bancadaId, {
-    galpaoId: b.galpaoId,
-    identificacao: b.identificacao,
-  });
-  return { ok: true };
+  const r = await excluirOuRecusar(
+    () => deps.db.bancada.delete({ where: { id: bancadaId } }),
+    `${recusa} Se ela acabou de entrar no mapeamento, troque-o em Regiões antes.`,
+  );
+  if (r.ok) {
+    await auditar(deps, adminId, 'cadastro.bancada.excluir', 'BANCADA', bancadaId, {
+      galpaoId: b.galpaoId,
+      identificacao: b.identificacao,
+    });
+  }
+  return r;
 }
 
 const esquemaRegiao = z.object({
   codigo: z.string().trim().min(1, 'Informe o código').max(10),
   nome: z.string().trim().min(2, 'Informe o bairro').max(80),
 });
+
+/**
+ * Lê e regrava a lista de bairros com a linha da região travada (SELECT … FOR UPDATE), numa
+ * transação: dois admins mexendo no mesmo código ao mesmo tempo não apagam o bairro um do
+ * outro. `regiao` é `null` se a região não existe (ou foi excluída por outro admin).
+ */
+async function comRegiaoTravada<T>(
+  deps: AuthDeps,
+  onde: { id: number } | { codigo: string },
+  fn: (regiao: Regiao | null, gravar: (bairros: string[]) => Promise<void>) => Promise<T>,
+): Promise<T> {
+  return deps.db.$transaction(async (tx) => {
+    const travada =
+      'id' in onde
+        ? await tx.$queryRaw<{ id: number }[]>`
+            SELECT id FROM "Regiao" WHERE id = ${onde.id} FOR UPDATE`
+        : await tx.$queryRaw<{ id: number }[]>`
+            SELECT id FROM "Regiao" WHERE codigo = ${onde.codigo} FOR UPDATE`;
+    const regiao = travada.length
+      ? await tx.regiao.findUnique({ where: { id: travada[0].id } })
+      : null;
+    return fn(regiao, async (bairros) => {
+      await tx.regiao.update({
+        where: { id: regiao!.id },
+        data: { bairros, nome: nomeDosBairros(bairros) },
+      });
+    });
+  });
+}
+
+const REGIAO_SUMIU = 'Essa região não existe mais. Recarregue a página.';
 
 /**
  * RF25-CA2 / RF25-CA6 — código novo cria a região; código existente ganha mais um bairro
@@ -388,40 +446,36 @@ export async function criarRegiao(
   const v = esquemaRegiao.safeParse(entrada);
   if (!v.success) return falha(errosDoZod(v.error));
   const { codigo, nome: bairro } = v.data;
-  const existente = await deps.db.regiao.findUnique({ where: { codigo } });
-  if (existente) {
-    const atuais = bairrosDe(existente);
-    if (atuais.some((b) => mesmoBairro(b, bairro))) {
+
+  // duas tentativas: se outro admin criar o mesmo código entre a leitura e o INSERT, a segunda
+  // passada encontra a região e só acrescenta o bairro
+  for (let tentativa = 1; ; tentativa++) {
+    const adicionado = await comRegiaoTravada(deps, { codigo }, async (existente, gravar) => {
+      if (!existente) return null;
+      const atuais = bairrosDe(existente);
+      if (atuais.some((b) => mesmoBairro(b, bairro))) return 'repetido' as const;
+      await gravar([...atuais, bairro]);
+      return existente.id;
+    });
+    if (adicionado === 'repetido') {
       return falha({ nome: `A região ${codigo} já tem o bairro ${bairro}` });
     }
-    const bairros = [...atuais, bairro];
-    await deps.db.regiao.update({
-      where: { id: existente.id },
-      data: { bairros, nome: nomeDosBairros(bairros) },
-    });
-    await auditar(deps, adminId, 'cadastro.regiao.adicionar_bairro', 'REGIAO', existente.id, {
-      bairro,
-    });
-    return { ok: true, bairroAdicionado: true };
-  }
-  try {
-    const r = await deps.db.regiao.create({ data: { codigo, nome: bairro, bairros: [bairro] } });
-    await auditar(deps, adminId, 'cadastro.regiao.criar', 'REGIAO', r.id);
-    return { ok: true, bairroAdicionado: false };
-  } catch (e) {
-    // outro admin criou o mesmo código no meio do caminho
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-      return falha({ codigo: 'Esse código acabou de ser cadastrado. Tente de novo.' });
+    if (adicionado !== null) {
+      await auditar(deps, adminId, 'cadastro.regiao.adicionar_bairro', 'REGIAO', adicionado, {
+        bairro,
+      });
+      return { ok: true, bairroAdicionado: true };
     }
-    throw e;
+    try {
+      const r = await deps.db.regiao.create({ data: { codigo, nome: bairro, bairros: [bairro] } });
+      await auditar(deps, adminId, 'cadastro.regiao.criar', 'REGIAO', r.id);
+      return { ok: true, bairroAdicionado: false };
+    } catch (e) {
+      const corrida = e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+      if (!corrida) throw e;
+      if (tentativa >= 2) return falha({ codigo: 'Não foi possível salvar. Tente de novo.' });
+    }
   }
-}
-
-async function gravarBairros(deps: AuthDeps, regiaoId: number, bairros: string[]) {
-  await deps.db.regiao.update({
-    where: { id: regiaoId },
-    data: { bairros, nome: nomeDosBairros(bairros) },
-  });
 }
 
 /** RF25-CA2 — renomeia um bairro da região; a senha já gerada guarda o nome antigo. */
@@ -434,23 +488,28 @@ export async function renomearBairro(
 ): Promise<Resultado> {
   const v = esquemaRegiao.shape.nome.safeParse(para);
   if (!v.success) return falha({ nome: v.error.issues[0].message });
-  const r = await deps.db.regiao.findUniqueOrThrow({ where: { id: regiaoId } });
-  const atuais = bairrosDe(r);
-  const i = atuais.indexOf(de);
-  if (i < 0) return falha({ geral: 'Esse bairro não existe mais. Recarregue a página.' });
-  if (atuais.some((b, j) => j !== i && mesmoBairro(b, v.data))) {
-    return falha({ nome: `A região ${r.codigo} já tem o bairro ${v.data}` });
-  }
-  await gravarBairros(
+  const r = await comRegiaoTravada(
     deps,
-    regiaoId,
-    atuais.map((b, j) => (j === i ? v.data : b)),
+    { id: regiaoId },
+    async (regiao, gravar): Promise<Resultado> => {
+      if (!regiao) return falha({ geral: REGIAO_SUMIU });
+      const atuais = bairrosDe(regiao);
+      const i = atuais.indexOf(de);
+      if (i < 0) return falha({ geral: 'Esse bairro não existe mais. Recarregue a página.' });
+      if (atuais.some((b, j) => j !== i && mesmoBairro(b, v.data))) {
+        return falha({ nome: `A região ${regiao.codigo} já tem o bairro ${v.data}` });
+      }
+      await gravar(atuais.map((b, j) => (j === i ? v.data : b)));
+      return { ok: true };
+    },
   );
-  await auditar(deps, adminId, 'cadastro.regiao.renomear_bairro', 'REGIAO', regiaoId, {
-    de,
-    para: v.data,
-  });
-  return { ok: true };
+  if (r.ok) {
+    await auditar(deps, adminId, 'cadastro.regiao.renomear_bairro', 'REGIAO', regiaoId, {
+      de,
+      para: v.data,
+    });
+  }
+  return r;
 }
 
 /** RF25-CA2 — tira um bairro; a região precisa ficar com pelo menos um. */
@@ -460,21 +519,28 @@ export async function removerBairro(
   regiaoId: number,
   bairro: string,
 ): Promise<Resultado> {
-  const r = await deps.db.regiao.findUniqueOrThrow({ where: { id: regiaoId } });
-  const atuais = bairrosDe(r);
-  if (!atuais.includes(bairro)) return { ok: true };
-  if (atuais.length === 1) {
-    return falha({
-      geral: `A região ${r.codigo} precisa de pelo menos um bairro. Para tirar a região, use Excluir ou Desativar.`,
-    });
-  }
-  await gravarBairros(
+  let removeu = false;
+  const r = await comRegiaoTravada(
     deps,
-    regiaoId,
-    atuais.filter((b) => b !== bairro),
+    { id: regiaoId },
+    async (regiao, gravar): Promise<Resultado> => {
+      if (!regiao) return falha({ geral: REGIAO_SUMIU });
+      const atuais = bairrosDe(regiao);
+      if (!atuais.includes(bairro)) return { ok: true }; // outro admin já tirou
+      if (atuais.length === 1) {
+        return falha({
+          geral: `A região ${regiao.codigo} precisa de pelo menos um bairro. Para tirar a região, use Excluir ou Desativar.`,
+        });
+      }
+      await gravar(atuais.filter((b) => b !== bairro));
+      removeu = true;
+      return { ok: true };
+    },
   );
-  await auditar(deps, adminId, 'cadastro.regiao.remover_bairro', 'REGIAO', regiaoId, { bairro });
-  return { ok: true };
+  if (removeu) {
+    await auditar(deps, adminId, 'cadastro.regiao.remover_bairro', 'REGIAO', regiaoId, { bairro });
+  }
+  return r;
 }
 
 /**
@@ -499,15 +565,21 @@ export async function excluirRegiao(
       } na região ${r.codigo}. Troque a região deles ou use Desativar.`,
     });
   }
-  await deps.db.$transaction([
-    deps.db.regiaoBancada.deleteMany({ where: { regiaoId } }),
-    deps.db.regiao.delete({ where: { id: regiaoId } }),
-  ]);
-  await auditar(deps, adminId, 'cadastro.regiao.excluir', 'REGIAO', regiaoId, {
-    codigo: r.codigo,
-    nome: r.nome,
-  });
-  return { ok: true };
+  const resultado = await excluirOuRecusar(
+    () =>
+      deps.db.$transaction([
+        deps.db.regiaoBancada.deleteMany({ where: { regiaoId } }),
+        deps.db.regiao.delete({ where: { id: regiaoId } }),
+      ]),
+    `Não é possível excluir: a região ${r.codigo} acabou de receber um motorista. Use Desativar.`,
+  );
+  if (resultado.ok) {
+    await auditar(deps, adminId, 'cadastro.regiao.excluir', 'REGIAO', regiaoId, {
+      codigo: r.codigo,
+      nome: r.nome,
+    });
+  }
+  return resultado;
 }
 
 /** RF25-CA4 — bloqueia desativar região com motoristas ativos. */
@@ -715,15 +787,14 @@ export async function excluirAdmin(
   });
   if (!a) return { ok: true };
   if (a.papel === 'SUPER_ADMIN') return falha({ geral: 'O super-admin não pode ser excluído.' });
+  const recusa = `Não é possível excluir: ${a.nome} já atendeu motoristas e aparece no histórico. Use Desativar.`;
   const { chamadas, chegadas, conclusoes, liberacoes } = a._count;
-  if (chamadas + chegadas + conclusoes + liberacoes > 0) {
-    return falha({
-      geral: `Não é possível excluir: ${a.nome} já atendeu motoristas e aparece no histórico. Use Desativar.`,
-    });
+  if (chamadas + chegadas + conclusoes + liberacoes > 0) return falha({ geral: recusa });
+  const r = await excluirOuRecusar(() => deps.db.admin.delete({ where: { id } }), recusa);
+  if (r.ok) {
+    await auditar(deps, superId, 'cadastro.admin.excluir', 'ADMIN', id, { nome: a.nome });
   }
-  await deps.db.admin.delete({ where: { id } });
-  await auditar(deps, superId, 'cadastro.admin.excluir', 'ADMIN', id, { nome: a.nome });
-  return { ok: true };
+  return r;
 }
 
 /** RF27-CA4 — o super-admin corrige o nome de qualquer admin (é o nome exibido como Conferente). */
